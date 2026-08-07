@@ -62,4 +62,4 @@ class VisionCheck(models.Model):
 
     def __str__(self):
         a = self.animal_id
-        return f"{a.animal_id} - {a.genotype} - {a.sex} - {a.dob} - Age:{a.age_in_days} days - Vision Test Result: {self.vision_test_result}"
+        return f"{a.animal_id} - {a.genotype} - {a.sex}"

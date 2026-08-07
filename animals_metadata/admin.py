@@ -34,8 +34,12 @@ class VisionCheckForm(forms.ModelForm):
 class VisionCheckAdmin(admin.ModelAdmin):
     form = VisionCheckForm
     list_display = (
-        "animal_id",
+        "get_animal_id",
          "vision_test_type",
         "vision_test_result"
     )
+    # Define how you want the animal ID column to display
+    @admin.display(description='Animal ID')
+    def get_animal_id(self, obj):
+        return f"{obj.animal_id.animal_id} - {obj.animal_id.genotype} - {obj.animal_id.sex}"
     search_fields = ("mouse_id", "vision_test_result", "vision_test_type")
