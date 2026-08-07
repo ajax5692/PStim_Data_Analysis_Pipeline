@@ -41,7 +41,6 @@ class Animal(models.Model):
             f" - {self.dob} - Age: {self.age_in_days} days"
         )
     
-    
 class VisionCheck(models.Model):
 
     class PassFailChoices(models.TextChoices):
@@ -59,7 +58,7 @@ class VisionCheck(models.Model):
     
     vision_test_type = models.CharField(max_length=10,choices=TestChoices.choices)
     vision_test_result = models.CharField(max_length=10,choices=PassFailChoices.choices)
-    
+    data_path = models.CharField(blank=True, null=True)
 
     class Meta:
         verbose_name = "Vision Check"
@@ -68,3 +67,39 @@ class VisionCheck(models.Model):
     def __str__(self):
         a = self.animal_id
         return f"{a.animal_id} - {a.owner} - {a.genotype} - {a.sex}"
+    
+class ViralInjection(models.Model):
+    
+    animal_id = models.ForeignKey(
+        Animal,
+        on_delete=models.CASCADE
+    )
+    
+    class VirusChoices(models.TextChoices):
+        AAV322 = 'AAV322', 'AAV322'
+        AAV418  = 'AAV418', 'AAV418'
+        
+    class VirusConstructChoices(models.TextChoices):
+        VIRUS_1 = 'AAV9-hSyn-DIO-jGCaMP8s-P2A-ChrimsonR-ST', 'AAV9-hSyn-DIO-jGCaMP8s-P2A-ChrimsonR-ST'
+    
+    class InjectionSiteChoices(models.TextChoices):
+        V1 = 'V1', 'V1'
+    
+    virus_name = models.CharField(max_length=100,choices=VirusChoices.choices)
+    virus_construct = models.CharField(max_length=100,choices=VirusConstructChoices.choices)
+    injection_date = models.DateField()
+    injection_site = models.CharField(max_length=100,choices=InjectionSiteChoices.choices)
+    volume_ul = models.FloatField(verbose_name="Volume (nL)")
+    notes = models.TextField(blank=True, null=True)
+    expression_pattern = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        verbose_name = "Viral Injections"
+        verbose_name_plural = "Viral Injections"
+        
+    def __str__(self):
+        a = self.animal_id
+        return (
+            f"{a.animal_id} - ({a.owner}) - {self.virus_name} - {self.virus_construct}"
+            f"{self.injection_date} - ({self.injection_site}) - {self.volume_ul} - {self.notes}"
+        )
