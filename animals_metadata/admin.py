@@ -13,7 +13,8 @@ class AnimalAdmin(admin.ModelAdmin):
         "genotype",
         "cage_id",
         "dob",
-        "age_in_days"
+        "age_in_days",
+        "status"
     )
     readonly_fields = ('age_in_days',)
     search_fields = ("mouse_id", "genotype", "cage_id", "sex", "owner")
@@ -30,7 +31,6 @@ class VisionCheckForm(forms.ModelForm):
         # Change the display label in the dropdown to just animal_id
         self.fields['animal_id'].label_from_instance = lambda obj: obj.animal_id
 
-
 @admin.register(VisionCheck)
 class VisionCheckAdmin(admin.ModelAdmin):
     form = VisionCheckForm
@@ -43,7 +43,7 @@ class VisionCheckAdmin(admin.ModelAdmin):
     # Define how you want the animal ID column to display
     @admin.display(description='Animal ID')
     def get_animal_id(self, obj):
-        return f"{obj.animal_id.animal_id} - {obj.animal_id.owner} - {obj.animal_id.genotype} - {obj.animal_id.sex}"
+        return f"{obj.animal_id.animal_id}"
     search_fields = ("mouse_id", "vision_test_result", "vision_test_type")
     
     
@@ -58,7 +58,6 @@ class ViralInjectionForm(forms.ModelForm):
         # Change the display label in the dropdown to just animal_id
         self.fields['animal_id'].label_from_instance = lambda obj: obj.animal_id
 
-
 @admin.register(ViralInjection)
 class ViralInjectionAdmin(admin.ModelAdmin):
     form = ViralInjectionForm
@@ -67,6 +66,7 @@ class ViralInjectionAdmin(admin.ModelAdmin):
         "get_owner",
         "virus_name",
         "virus_construct",
+        "injecting_person",
         "injection_date",
         "injection_site",
         "volume_ul",

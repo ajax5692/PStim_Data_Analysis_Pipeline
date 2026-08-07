@@ -11,10 +11,15 @@ class Animal(models.Model):
     class OwnerChoices(models.TextChoices):
         AC = 'AC', 'Abhrajyoti'
         TB  = 'TB', 'Balázs'
-    
+        VK = 'VK', 'Varada'
+        
     class GenotypeChoices(models.TextChoices):
         TC = 'Thy1-Cre', 'Thy1-Cre'
         TG = 'Thy1-gcamp6s', 'Thy1/gcamp6s (Tg)'
+        
+    class StatusChoices(models.TextChoices):
+        ALIVE = 'Alive', 'Alive'
+        DEAD  = 'Dead', 'Dead'
         
     animal_id = models.CharField(max_length=10,unique=True)
     owner = models.CharField(max_length=100,choices=OwnerChoices.choices, null=True, blank=True)
@@ -30,7 +35,8 @@ class Animal(models.Model):
         today = timezone.now().date()
         return (today - self.dob).days
     
-
+    status = models.CharField(max_length=100,choices=StatusChoices.choices, null=True, blank=True)
+    
     class Meta:
         verbose_name = "Animal"
         verbose_name_plural = "Animals"
@@ -88,6 +94,7 @@ class ViralInjection(models.Model):
     virus_name = models.CharField(max_length=100,choices=VirusChoices.choices)
     virus_construct = models.CharField(max_length=100,choices=VirusConstructChoices.choices)
     injection_date = models.DateField()
+    injecting_person = models.CharField(max_length=100,choices=Animal.OwnerChoices.choices, null=True, blank=True)
     injection_site = models.CharField(max_length=100,choices=InjectionSiteChoices.choices)
     volume_ul = models.FloatField(verbose_name="Volume (nL)")
     notes = models.TextField(blank=True, null=True)
