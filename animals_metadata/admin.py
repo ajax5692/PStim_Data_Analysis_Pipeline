@@ -8,6 +8,7 @@ from .models import Animal, VisionCheck
 class AnimalAdmin(admin.ModelAdmin):
     list_display = (
         "animal_id",
+        "owner",
         "sex",
         "genotype",
         "cage_id",
@@ -15,7 +16,7 @@ class AnimalAdmin(admin.ModelAdmin):
         "age_in_days"
     )
     readonly_fields = ('age_in_days',)
-    search_fields = ("mouse_id", "genotype", "cage_id", "sex")
+    search_fields = ("mouse_id", "genotype", "cage_id", "sex", "owner")
 
 
 # Custom Form for VisionCheck
@@ -41,5 +42,5 @@ class VisionCheckAdmin(admin.ModelAdmin):
     # Define how you want the animal ID column to display
     @admin.display(description='Animal ID')
     def get_animal_id(self, obj):
-        return f"{obj.animal_id.animal_id} - {obj.animal_id.genotype} - {obj.animal_id.sex}"
+        return f"{obj.animal_id.animal_id} - {obj.animal_id.owner} - {obj.animal_id.genotype} - {obj.animal_id.sex}"
     search_fields = ("mouse_id", "vision_test_result", "vision_test_type")

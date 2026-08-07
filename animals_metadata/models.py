@@ -6,15 +6,20 @@ class Animal(models.Model):
     
     class SexChoices(models.TextChoices):
         MALE = 'M', 'Male'
-        FEMALE  = 'F', 'Female' 
+        FEMALE  = 'F', 'Female'
+        
+    class OwnerChoices(models.TextChoices):
+        AC = 'AC', 'Abhrajyoti'
+        TB  = 'TB', 'Balázs'
     
     class GenotypeChoices(models.TextChoices):
         TC = 'Thy1-Cre', 'Thy1-Cre'
         TG = 'Thy1-gcamp6s', 'Thy1/gcamp6s (Tg)'
         
     animal_id = models.CharField(max_length=10,unique=True)
-    genotype = models.CharField(max_length=100,choices=GenotypeChoices.choices)
+    owner = models.CharField(max_length=100,choices=OwnerChoices.choices, null=True, blank=True)
     sex = models.CharField(max_length=100,choices=SexChoices.choices)
+    genotype = models.CharField(max_length=100,choices=GenotypeChoices.choices)
     cage_id = models.CharField(max_length=100)
     
     dob = models.DateField(verbose_name="Date of Birth")
@@ -32,8 +37,8 @@ class Animal(models.Model):
 
     def __str__(self):
         return (
-            f"{self.animal_id} - {self.genotype} - {self.sex} - {self.dob} "
-            f"- Age: {self.age_in_days} days"
+            f"{self.animal_id} - {self.owner} - {self.genotype} - {self.sex}"
+            f" - {self.dob} - Age: {self.age_in_days} days"
         )
     
     
@@ -62,4 +67,4 @@ class VisionCheck(models.Model):
 
     def __str__(self):
         a = self.animal_id
-        return f"{a.animal_id} - {a.genotype} - {a.sex}"
+        return f"{a.animal_id} - {a.owner} - {a.genotype} - {a.sex}"
