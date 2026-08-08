@@ -1,7 +1,7 @@
 # views.py
 from django.shortcuts import render
 
-from .models import ViralInjection
+from animals_metadata.models import ViralInjection
 
 
 def viral_injection_list_view(request):

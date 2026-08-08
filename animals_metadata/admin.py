@@ -1,10 +1,11 @@
 from django.contrib import admin
+from simple_history.admin import SimpleHistoryAdmin
 
 from animals_metadata.models import Animal, ViralInjection, VisionCheck
 
 
 @admin.register(Animal)
-class AnimalAdmin(admin.ModelAdmin):
+class AnimalAdmin(SimpleHistoryAdmin):
     list_display = (
         "animal_id",
         "owner",
@@ -22,7 +23,7 @@ class AnimalAdmin(admin.ModelAdmin):
 
 
 @admin.register(VisionCheck)
-class VisionCheckAdmin(admin.ModelAdmin):
+class VisionCheckAdmin(SimpleHistoryAdmin):
     list_display = (
         "get_animal_id",
         "vision_test_type",
@@ -37,7 +38,7 @@ class VisionCheckAdmin(admin.ModelAdmin):
     
 
 @admin.register(ViralInjection)
-class ViralInjectionAdmin(admin.ModelAdmin):
+class ViralInjectionAdmin(SimpleHistoryAdmin):
     list_display = (
         "get_animal_id",
         "get_owner",
@@ -66,3 +67,42 @@ class ViralInjectionAdmin(admin.ModelAdmin):
     @admin.display(description='Injecting Person')
     def get_inj_person(self, obj):
         return obj.injecting_person
+    
+
+
+Animal.history.model._meta.verbose_name_plural = "Entry History: Animals"
+VisionCheck.history.model._meta.verbose_name_plural = "Entry History: Vision Checks"
+ViralInjection.history.model._meta.verbose_name_plural = "Entry History: Viral Injections"
+
+
+# Base Class for Read-Only Historical Logs
+class BaseHistoryAdmin(admin.ModelAdmin):
+    # Prevent manual editing of raw audit history entries
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+# Register All History Models
+@admin.register(Animal.history.model)
+class AnimalHistoryAdmin(BaseHistoryAdmin):
+    list_display = ("history_id", "animal_id", "history_type", "history_date", "history_user", "status")
+    list_filter = ("history_type", "status", "genotype")
+    search_fields = ("animal_id",)
+
+@admin.register(VisionCheck.history.model)
+class VisionCheckHistoryAdmin(BaseHistoryAdmin):
+    list_display = ("history_id", "animal_id", "vision_test_type", "history_type", "history_date", "history_user")
+    list_filter = ("history_type", "vision_test_type", "vision_test_result")
+    search_fields = ("animal_id__animal_id",)
+
+@admin.register(ViralInjection.history.model)
+class ViralInjectionHistoryAdmin(BaseHistoryAdmin):
+    list_display = ("history_id", "animal_id", "virus_name", "history_type", "history_date", "history_user")
+    list_filter = ("history_type", "virus_name")
+    search_fields = ("animal_id__animal_id",)

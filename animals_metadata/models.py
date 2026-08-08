@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from simple_history.models import HistoricalRecords
 
 
 class Animal(models.Model):
@@ -38,6 +39,7 @@ class Animal(models.Model):
         return (today - self.dob).days
     
     status = models.CharField(max_length=100,choices=StatusChoices.choices, null=True, blank=True)
+    history = HistoricalRecords()
     
     class Meta:
         verbose_name = "Animal"
@@ -64,6 +66,7 @@ class VisionCheck(models.Model):
     vision_test_type = models.CharField(max_length=10,choices=TestChoices.choices)
     vision_test_result = models.CharField(max_length=10,choices=PassFailChoices.choices)
     data_path = models.CharField(blank=True, null=True)
+    history = HistoricalRecords()
 
     class Meta:
         verbose_name = "Vision Check"
@@ -96,6 +99,7 @@ class ViralInjection(models.Model):
     surgery_person = models.CharField(max_length=100,choices=Animal.OwnerChoices.choices, null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
     expression_pattern = models.TextField(blank=True, null=True)
+    history = HistoricalRecords()
     
     class Meta:
         verbose_name = "Viral Injections"
