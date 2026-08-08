@@ -25,7 +25,7 @@ class Animal(models.Model):
     owner = models.CharField(max_length=100,choices=OwnerChoices.choices, null=True, blank=True)
     sex = models.CharField(max_length=100,choices=SexChoices.choices)
     genotype = models.CharField(max_length=100,choices=GenotypeChoices.choices)
-    cage_id = models.CharField(max_length=100)
+    cage_id = models.CharField(max_length=100, null=True, blank=True)
     ogr_id = models.CharField(max_length=100, null=True, blank=True)
     project_id = models.CharField(max_length=100, null=True, blank=True)
     
@@ -42,6 +42,9 @@ class Animal(models.Model):
     class Meta:
         verbose_name = "Animal"
         verbose_name_plural = "Animals"
+        
+    def __str__(self):
+        return self.animal_id
     
 class VisionCheck(models.Model):
 
@@ -89,6 +92,8 @@ class ViralInjection(models.Model):
     injecting_person = models.CharField(max_length=100,choices=Animal.OwnerChoices.choices, null=True, blank=True)
     injection_site = models.CharField(max_length=100,choices=InjectionSiteChoices.choices)
     volume_ul = models.FloatField(verbose_name="Volume (nL)")
+    surgery_date = models.DateField(null=True, blank=True)
+    surgery_person = models.CharField(max_length=100,choices=Animal.OwnerChoices.choices, null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
     expression_pattern = models.TextField(blank=True, null=True)
     
