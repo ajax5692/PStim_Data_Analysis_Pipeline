@@ -43,7 +43,7 @@ class ViralInjectionAdmin(admin.ModelAdmin):
         "get_owner",
         "virus_name",
         "virus_construct",
-        "injecting_person",
+        "get_inj_person",
         "injection_date",
         "injection_site",
         "volume_ul",
@@ -61,3 +61,8 @@ class ViralInjectionAdmin(admin.ModelAdmin):
     @admin.display(description='Owner')
     def get_owner(self, obj):
         return obj.animal_id.owner
+    
+    # Define how to get the Injecting Person from the connected Animal model
+    @admin.display(description='Injecting Person')
+    def get_inj_person(self, obj):
+        return obj.injecting_person
