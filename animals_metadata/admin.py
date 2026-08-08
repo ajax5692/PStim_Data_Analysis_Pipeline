@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
 from animals_metadata.models import Animal, ViralInjection, VisionCheck
@@ -77,32 +78,62 @@ ViralInjection.history.model._meta.verbose_name_plural = "Entry History: Viral I
 
 # Base Class for Read-Only Historical Logs
 class BaseHistoryAdmin(admin.ModelAdmin):
-    # Prevent manual editing of raw audit history entries
-    def has_add_permission(self, request):
-        return False
+    def get_changes(self, obj):
+        prev_record = obj.prev_record
+        
+        if not prev_record:
+            return mark_safe('<span style="color: #27ae60; font-weight: bold;">Initial Entry</span>')
+        
+        if obj.history_type == '-':
+            return mark_safe('<span style="color: #c0392b; font-weight: bold;">Deleted Record</span>')
 
-    def has_change_permission(self, request, obj=None):
-        return False
+        changes = []
+        try:
+            delta = obj.diff_against(prev_record)
+            for change in delta.changes:
+                changes.append(
+                    f"<b>{change.field}</b>: "
+                    f"<span style='color: #c0392b;'>'{change.old}'</span> → "
+                    f"<span style='color: #27ae60; font-weight: bold;'>'{change.new}'</span>"
+                )
+        except TypeError:
+            excluded_fields = {'history_id', 'history_date', 'history_type', 'history_user_id', 'history_change_reason'}
+            for field in obj._meta.fields:
+                if field.name in excluded_fields:
+                    continue
+                old_val = getattr(prev_record, field.name, None)
+                new_val = getattr(obj, field.name, None)
+                if old_val != new_val:
+                    changes.append(
+                        f"<b>{field.name}</b>: "
+                        f"<span style='color: #c0392b;'>'{old_val}'</span> → "
+                        f"<span style='color: #27ae60; font-weight: bold;'>'{new_val}'</span>"
+                    )
 
-    def has_delete_permission(self, request, obj=None):
-        return False
+        if not changes:
+            return "No field changes"
+            
+        # FIX: Replace format_html with mark_safe here
+        return mark_safe("<br>".join(changes))
+
+    get_changes.short_description = "Modified Fields"
 
 
 # Register All History Models
 @admin.register(Animal.history.model)
 class AnimalHistoryAdmin(BaseHistoryAdmin):
-    list_display = ("history_id", "animal_id", "history_type", "history_date", "history_user", "status")
-    list_filter = ("history_type", "status", "genotype")
+    list_display = ("history_id", "animal_id", "history_type", "history_date", "get_changes", "history_user")
+    list_filter = ("history_type",)
     search_fields = ("animal_id",)
 
 @admin.register(VisionCheck.history.model)
 class VisionCheckHistoryAdmin(BaseHistoryAdmin):
-    list_display = ("history_id", "animal_id", "vision_test_type", "history_type", "history_date", "history_user")
-    list_filter = ("history_type", "vision_test_type", "vision_test_result")
+    list_display = ("history_id", "animal_id", "history_type", "history_date", "get_changes", "history_user")
+    list_filter = ("history_type",)
     search_fields = ("animal_id__animal_id",)
 
 @admin.register(ViralInjection.history.model)
 class ViralInjectionHistoryAdmin(BaseHistoryAdmin):
-    list_display = ("history_id", "animal_id", "virus_name", "history_type", "history_date", "history_user")
-    list_filter = ("history_type", "virus_name")
+    list_display = ("history_id", "animal_id", "history_type", "history_date", "get_changes", "history_user")
+    list_filter = ("history_type",)
     search_fields = ("animal_id__animal_id",)
