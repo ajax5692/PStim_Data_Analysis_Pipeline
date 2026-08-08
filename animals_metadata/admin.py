@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Animal, ViralInjection, VisionCheck
+from animals_metadata.models import Animal, ViralInjection, VisionCheck
 
 
 @admin.register(Animal)
@@ -32,7 +32,7 @@ class VisionCheckAdmin(admin.ModelAdmin):
     # Define how you want the animal ID column to display
     @admin.display(description='Animal ID')
     def get_animal_id(self, obj):
-        return f"{obj.animal_id.animal_id}"
+        return obj.animal_id
     search_fields = ("mouse_id", "vision_test_result", "vision_test_type")
     
 
@@ -55,7 +55,7 @@ class ViralInjectionAdmin(admin.ModelAdmin):
     # Define how you want the animal ID column to display
     @admin.display(description='Animal ID')
     def get_animal_id(self, obj):
-        return f"{obj.animal_id.animal_id}"
+        return obj.animal_id
     
     # Define how to get the Owner from the connected Animal model
     @admin.display(description='Owner')
