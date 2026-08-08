@@ -12,6 +12,8 @@ class AnimalAdmin(admin.ModelAdmin):
         "sex",
         "genotype",
         "cage_id",
+        "ogr_id",
+        "project_id",
         "dob",
         "age_in_days",
         "status"

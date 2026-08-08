@@ -26,6 +26,8 @@ class Animal(models.Model):
     sex = models.CharField(max_length=100,choices=SexChoices.choices)
     genotype = models.CharField(max_length=100,choices=GenotypeChoices.choices)
     cage_id = models.CharField(max_length=100)
+    ogr_id = models.CharField(max_length=100, null=True, blank=True)
+    project_id = models.CharField(max_length=100, null=True, blank=True)
     
     dob = models.DateField(verbose_name="Date of Birth")
     @property
@@ -40,12 +42,6 @@ class Animal(models.Model):
     class Meta:
         verbose_name = "Animal"
         verbose_name_plural = "Animals"
-
-    def __str__(self):
-        return (
-            f"{self.animal_id} - {self.owner} - {self.genotype} - {self.sex}"
-            f" - {self.dob} - Age: {self.age_in_days} days"
-        )
     
 class VisionCheck(models.Model):
 
@@ -69,10 +65,6 @@ class VisionCheck(models.Model):
     class Meta:
         verbose_name = "Vision Check"
         verbose_name_plural = "Vision Check"
-
-    def __str__(self):
-        a = self.animal_id
-        return f"{a.animal_id} - {a.owner} - {a.genotype} - {a.sex}"
     
 class ViralInjection(models.Model):
     
@@ -103,10 +95,3 @@ class ViralInjection(models.Model):
     class Meta:
         verbose_name = "Viral Injections"
         verbose_name_plural = "Viral Injections"
-        
-    def __str__(self):
-        a = self.animal_id
-        return (
-            f"{a.animal_id} - ({a.owner}) - {self.virus_name} - {self.virus_construct}"
-            f"{self.injection_date} - ({self.injection_site}) - {self.volume_ul} - {self.notes}"
-        )
