@@ -4,6 +4,7 @@ from django.apps import AppConfig
 class AnimalsMetadataConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "animals_metadata"
+    verbose_name = 'ANIMALS METADATA'
 
     def ready(self):
         from django.contrib import admin
