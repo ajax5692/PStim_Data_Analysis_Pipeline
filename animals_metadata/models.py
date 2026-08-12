@@ -104,3 +104,52 @@ class ViralInjection(models.Model):
     class Meta:
         verbose_name = "Viral Injections"
         verbose_name_plural = "Viral Injections"
+
+class TrackChanges(models.Model):
+
+    class CategoryChoices(models.TextChoices):
+        ANIMAL = "animal", "Animal"
+        VISION_CHECK = "vision_check", "Vision Check"
+        VIRAL_INJECTION = "viral_injection", "Viral Injection"
+
+    class ActionChoices(models.TextChoices):
+        CREATED = "+", "Created"
+        UPDATED = "~", "Updated"
+        DELETED = "-", "Deleted"
+
+    category = models.CharField(
+        max_length=30,
+        choices=CategoryChoices.choices,
+    )
+
+    animal_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+    )
+
+    action = models.CharField(
+        max_length=1,
+        choices=ActionChoices.choices,
+    )
+
+    changed_at = models.DateTimeField()
+
+    changed_by = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+    )
+
+    changes = models.TextField(
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        verbose_name = "Track Change"
+        verbose_name_plural = "Track Changes"
+        ordering = ["-changed_at"]
+
+    def __str__(self):
+        return f"{self.get_category_display()} - {self.animal_id}"
