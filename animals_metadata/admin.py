@@ -1,8 +1,12 @@
 from django.contrib import admin
-from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
-from animals_metadata.models import Animal, ViralInjection, VisionCheck
+from animals_metadata.models import (
+    Animal,
+    TrackChanges,
+    ViralInjection,
+    VisionCheck,
+)
 
 
 @admin.register(Animal)
@@ -20,7 +24,7 @@ class AnimalAdmin(SimpleHistoryAdmin):
         "status"
     )
     readonly_fields = ('age_in_days',)
-    search_fields = ("mouse_id", "genotype", "cage_id", "sex", "owner")
+    search_fields = ("animal_id", "genotype", "cage_id", "sex", "owner")
 
 
 @admin.register(VisionCheck)
@@ -35,7 +39,7 @@ class VisionCheckAdmin(SimpleHistoryAdmin):
     @admin.display(description='Animal ID')
     def get_animal_id(self, obj):
         return obj.animal_id
-    search_fields = ("mouse_id", "vision_test_result", "vision_test_type")
+    search_fields = ("animal_id__animal_id", "vision_test_result", "vision_test_type")
     
 
 @admin.register(ViralInjection)
@@ -69,71 +73,54 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
     def get_inj_person(self, obj):
         return obj.injecting_person
     
+    search_fields = (
+    "animal_id__animal_id",
+    "virus_name",
+    "virus_construct",
+    "injecting_person",
+    "surgery_person",
+    )
 
+    
+@admin.register(TrackChanges)
+class TrackChangesAdmin(admin.ModelAdmin):
+    list_display = (
+        "category",
+        "animal_id",
+        "action",
+        "changed_at",
+        "changed_by",
+        "changes",
+    )
 
-Animal.history.model._meta.verbose_name_plural = "Entry History: Animals"
-VisionCheck.history.model._meta.verbose_name_plural = "Entry History: Vision Checks"
-ViralInjection.history.model._meta.verbose_name_plural = "Entry History: Viral Injections"
+    list_filter = (
+        "category",
+        "action",
+        "changed_at",
+    )
 
+    search_fields = (
+        "animal_id",
+        "changed_by",
+        "changes",
+    )
 
-# Base Class for Read-Only Historical Logs
-class BaseHistoryAdmin(admin.ModelAdmin):
-    def get_changes(self, obj):
-        prev_record = obj.prev_record
-        
-        if not prev_record:
-            return mark_safe('<span style="color: #27ae60; font-weight: bold;">Initial Entry</span>')
-        
-        if obj.history_type == '-':
-            return mark_safe('<span style="color: #c0392b; font-weight: bold;">Deleted Record</span>')
+    ordering = ("-changed_at",)
 
-        changes = []
-        try:
-            delta = obj.diff_against(prev_record)
-            for change in delta.changes:
-                changes.append(
-                    f"<b>{change.field}</b>: "
-                    f"<span style='color: #c0392b;'>'{change.old}'</span> → "
-                    f"<span style='color: #27ae60; font-weight: bold;'>'{change.new}'</span>"
-                )
-        except TypeError:
-            excluded_fields = {'history_id', 'history_date', 'history_type', 'history_user_id', 'history_change_reason'}
-            for field in obj._meta.fields:
-                if field.name in excluded_fields:
-                    continue
-                old_val = getattr(prev_record, field.name, None)
-                new_val = getattr(obj, field.name, None)
-                if old_val != new_val:
-                    changes.append(
-                        f"<b>{field.name}</b>: "
-                        f"<span style='color: #c0392b;'>'{old_val}'</span> → "
-                        f"<span style='color: #27ae60; font-weight: bold;'>'{new_val}'</span>"
-                    )
+    readonly_fields = (
+        "category",
+        "animal_id",
+        "action",
+        "changed_at",
+        "changed_by",
+        "changes",
+    )
 
-        if not changes:
-            return "No field changes"
-            
-        # FIX: Replace format_html with mark_safe here
-        return mark_safe("<br>".join(changes))
+    def has_add_permission(self, request):
+        return False
 
-    get_changes.short_description = "Modified Fields"
+    def has_change_permission(self, request, obj=None):
+        return False
 
-
-# Register All History Models
-@admin.register(Animal.history.model)
-class AnimalHistoryAdmin(BaseHistoryAdmin):
-    list_display = ("history_id", "animal_id", "history_type", "history_date", "get_changes", "history_user")
-    list_filter = ("history_type",)
-    search_fields = ("animal_id",)
-
-@admin.register(VisionCheck.history.model)
-class VisionCheckHistoryAdmin(BaseHistoryAdmin):
-    list_display = ("history_id", "animal_id", "history_type", "history_date", "get_changes", "history_user")
-    list_filter = ("history_type",)
-    search_fields = ("animal_id__animal_id",)
-
-@admin.register(ViralInjection.history.model)
-class ViralInjectionHistoryAdmin(BaseHistoryAdmin):
-    list_display = ("history_id", "animal_id", "history_type", "history_date", "get_changes", "history_user")
-    list_filter = ("history_type",)
-    search_fields = ("animal_id__animal_id",)
+    def has_delete_permission(self, request, obj=None):
+        return False
