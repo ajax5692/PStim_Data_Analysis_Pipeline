@@ -43,8 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'simple_history',
     'animals_metadata',
-    'experiments',
-    'analysis',
+    'imaging_metadata',
 ]
 
 MIDDLEWARE = [
