@@ -1,5 +1,7 @@
 from django.db import models
 
+from .utils import parse_unit_ranges
+
 
 class AnalysisRun(models.Model):
     class StatusChoices(models.TextChoices):
@@ -80,6 +82,12 @@ class AnalysisRun(models.Model):
     @property
     def animal_id(self):
         return self.imaging_session.animal.animal_id
+    
+    @property
+    def unit_indices(self):
+        return parse_unit_ranges(
+            self.imaging_session.measurement_unit_ranges
+        )
 
     class Meta:
         verbose_name = "Analysis Run"
