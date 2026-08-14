@@ -1,5 +1,9 @@
 from pathlib import Path
 
+from django.db import transaction
+
+from .models import AnalysisRun
+
 
 def get_analysis_inputs(analysis_run):
     mesc_file_path = Path(
@@ -30,8 +34,6 @@ def get_analysis_inputs(analysis_run):
     }
     
 def execute_analysis(analysis_run):
-    analysis_run.mark_running()
-
     try:
         inputs = get_analysis_inputs(analysis_run)
 
@@ -45,3 +47,30 @@ def execute_analysis(analysis_run):
     except Exception as exc:
         analysis_run.mark_failed(str(exc))
         raise
+    
+def claim_next_pending_analysis():
+    with transaction.atomic():
+        analysis_run = (
+            AnalysisRun.objects
+            .select_for_update(skip_locked=True)
+            .filter(status=AnalysisRun.StatusChoices.PENDING)
+            .order_by("created_at")
+            .first()
+        )
+
+        if analysis_run is None:
+            return None
+
+        analysis_run.mark_running()
+
+        return analysis_run
+    
+def process_next_analysis():
+    analysis_run = claim_next_pending_analysis()
+
+    if analysis_run is None:
+        return None
+
+    execute_analysis(analysis_run)
+
+    return analysis_run
