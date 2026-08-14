@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'simple_history',
     'animals_metadata',
     'imaging_metadata',
+    'imaging_analysis_metadata',
 ]
 
 MIDDLEWARE = [
