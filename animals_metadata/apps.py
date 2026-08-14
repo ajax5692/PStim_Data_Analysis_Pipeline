@@ -40,7 +40,8 @@ class AnimalsMetadataConfig(AppConfig):
             app_order = {
                 "animals_metadata": 0,
                 "imaging_metadata": 1,
-                "auth": 2,
+                "imaging_analysis_metadata": 2,
+                "auth": 3,
             }
 
             app_list.sort(
