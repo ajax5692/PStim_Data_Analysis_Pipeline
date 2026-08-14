@@ -22,6 +22,7 @@ def get_analysis_inputs(analysis_run):
         )
 
     return {
+        "analysis_run_id": analysis_run.pk,
         "mesc_file_path": str(mesc_file_path),
         "unit_indices": analysis_run.unit_indices,
         "default_diameter": analysis_run.default_diameter,
