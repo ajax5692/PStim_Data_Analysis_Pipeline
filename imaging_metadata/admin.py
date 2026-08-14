@@ -6,21 +6,20 @@ from .models import ImagingSession
 @admin.register(ImagingSession)
 class ImagingSessionAdmin(admin.ModelAdmin):
     list_display = (
-        "animal_identifier",
+        "animal",
         "acquisition_date",
         "imaging_region",
         "measurement_unit_ranges",
-        "number_of_planes",
+        "mesc_file_path",
     )
 
     list_filter = (
         "acquisition_date",
         "imaging_region",
-        "number_of_planes",
     )
 
     search_fields = (
-        "animal_identifier",
+        "animal__animal_id",
         "imaging_region",
         "mesc_file_path",
         "measurement_unit_ranges",

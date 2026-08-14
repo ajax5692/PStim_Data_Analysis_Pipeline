@@ -2,9 +2,10 @@ from django.db import models
 
 
 class ImagingSession(models.Model):
-    animal_identifier = models.CharField(
-        max_length=100,
-        help_text="Animal or subject identifier used for this imaging session.",
+    animal = models.ForeignKey(
+        "animals_metadata.Animal",
+        on_delete=models.PROTECT,
+        related_name="imaging_sessions",
     )
 
     acquisition_date = models.DateField()
@@ -25,8 +26,6 @@ class ImagingSession(models.Model):
         help_text="Example: 10:21,25:55",
     )
 
-    number_of_planes = models.PositiveIntegerField()
-
     notes = models.TextField(
         blank=True,
         null=True,
@@ -38,4 +37,4 @@ class ImagingSession(models.Model):
         ordering = ["-acquisition_date"]
 
     def __str__(self):
-        return f"{self.animal_identifier} - {self.acquisition_date}"
+        return f"{self.animal.animal_id} - {self.acquisition_date}"
