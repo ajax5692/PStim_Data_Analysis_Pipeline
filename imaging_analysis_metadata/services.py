@@ -28,3 +28,20 @@ def get_analysis_inputs(analysis_run):
         "default_diameter": analysis_run.default_diameter,
         "tau": analysis_run.tau,
     }
+    
+def execute_analysis(analysis_run):
+    analysis_run.mark_running()
+
+    try:
+        inputs = get_analysis_inputs(analysis_run)
+
+        # Temporary placeholder.
+        # Your Suite2p pipeline will eventually be called here.
+        print("Analysis inputs:")
+        print(inputs)
+
+        analysis_run.mark_completed()
+
+    except Exception as exc:
+        analysis_run.mark_failed(str(exc))
+        raise
