@@ -24,7 +24,9 @@ class AnalysisRun(models.Model):
         default=StatusChoices.PENDING,
     )
     
-    frame_rate = models.FloatField(
+    frame_rate = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
         blank=True,
         null=True,
         help_text="Frame rate detected by the imaging analysis pipeline (Hz).",
@@ -40,18 +42,6 @@ class AnalysisRun(models.Model):
         default=0.7,
         validators=[MinValueValidator(0.01)],
         help_text="Calcium indicator decay time constant used for analysis.",
-    )
-    
-    suite2p_version = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text="Suite2p version used for this analysis run.",
-    )
-
-    suite2p_git_commit = models.CharField(
-        max_length=64,
-        blank=True,
-        help_text="Git commit hash of the customized Suite2p code used for this run.",
     )
 
     created_at = models.DateTimeField(
