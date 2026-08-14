@@ -19,6 +19,34 @@ class AnalysisRun(models.Model):
         choices=StatusChoices.choices,
         default=StatusChoices.PENDING,
     )
+    
+    frame_rate = models.FloatField(
+        blank=True,
+        null=True,
+        help_text="Frame rate detected by the imaging analysis pipeline (Hz).",
+    )
+    
+    default_diameter = models.FloatField(
+        default=12.0,
+        help_text="Expected cell diameter used for Suite2p cell detection.",
+    )
+
+    tau = models.FloatField(
+        default=0.7,
+        help_text="Calcium indicator decay time constant used for analysis.",
+    )
+    
+    suite2p_version = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Suite2p version used for this analysis run.",
+    )
+
+    suite2p_git_commit = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="Git commit hash of the customized Suite2p code used for this run.",
+    )
 
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -37,6 +65,12 @@ class AnalysisRun(models.Model):
     output_path = models.CharField(
         max_length=500,
         blank=True,
+    )
+    
+    parameter_log_path = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Path to the Suite2p parameter log generated for this analysis run.",
     )
 
     notes = models.TextField(
