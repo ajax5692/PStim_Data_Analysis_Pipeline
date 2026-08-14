@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from .utils import parse_unit_ranges
@@ -30,11 +31,13 @@ class AnalysisRun(models.Model):
     
     default_diameter = models.FloatField(
         default=12.0,
+        validators=[MinValueValidator(0.01)],
         help_text="Expected cell diameter used for Suite2p cell detection.",
     )
 
     tau = models.FloatField(
         default=0.7,
+        validators=[MinValueValidator(0.01)],
         help_text="Calcium indicator decay time constant used for analysis.",
     )
     
