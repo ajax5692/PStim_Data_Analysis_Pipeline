@@ -13,8 +13,6 @@ class AnalysisRunAdmin(admin.ModelAdmin):
         "frame_rate",
         "default_diameter",
         "tau",
-        "suite2p_version",
-        "suite2p_git_commit",
         "created_at",
         "started_at",
         "completed_at",
