@@ -1,5 +1,6 @@
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 from .utils import parse_unit_ranges
 
@@ -81,6 +82,11 @@ class AnalysisRun(models.Model):
     notes = models.TextField(
         blank=True,
     )
+    
+    error_message = models.TextField(
+        blank=True,
+        help_text="Error message recorded if the analysis run fails.",
+    )
 
     @property
     def animal_id(self):
@@ -90,6 +96,44 @@ class AnalysisRun(models.Model):
     def unit_indices(self):
         return parse_unit_ranges(
             self.imaging_session.measurement_unit_ranges
+        )
+        
+    def mark_running(self):
+        self.status = self.StatusChoices.RUNNING
+        self.started_at = timezone.now()
+        self.completed_at = None
+        self.error_message = ""
+
+        self.save(
+            update_fields=[
+                "status",
+                "started_at",
+                "completed_at",
+                "error_message",
+            ]
+        )
+
+    def mark_completed(self):
+        self.status = self.StatusChoices.COMPLETED
+        self.completed_at = timezone.now()
+        self.save(
+            update_fields=[
+                "status",
+                "completed_at",
+            ]
+        )
+
+    def mark_failed(self, error_message=""):
+        self.status = self.StatusChoices.FAILED
+        self.completed_at = timezone.now()
+        self.error_message = str(error_message)
+
+        self.save(
+            update_fields=[
+                "status",
+                "completed_at",
+                "error_message",
+            ]
         )
 
     class Meta:
