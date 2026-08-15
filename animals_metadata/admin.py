@@ -21,10 +21,28 @@ class AnimalAdmin(SimpleHistoryAdmin):
         "project_id",
         "dob",
         "age_in_days",
-        "status"
+        "status",
     )
-    readonly_fields = ('age_in_days',)
-    search_fields = ("animal_id", "genotype", "cage_id", "sex", "owner")
+
+    list_filter = (
+        "status",
+        "sex",
+        "owner",
+        "genotype",
+        "project_id",
+    )
+
+    readonly_fields = (
+        "age_in_days",
+    )
+
+    search_fields = (
+        "animal_id",
+        "genotype",
+        "cage_id",
+        "sex",
+        "owner",
+    )
 
 
 @admin.register(VisionCheck)
@@ -33,14 +51,25 @@ class VisionCheckAdmin(SimpleHistoryAdmin):
         "get_animal_id",
         "vision_test_type",
         "vision_test_result",
-        "data_path"
+        "data_path",
     )
-    # Define how you want the animal ID column to display
-    @admin.display(description='Animal ID')
+
+    list_filter = (
+        "vision_test_type",
+        "vision_test_result",
+        "animal_id",
+    )
+
+    search_fields = (
+        "animal_id__animal_id",
+        "vision_test_result",
+        "vision_test_type",
+    )
+
+    @admin.display(description="Animal ID")
     def get_animal_id(self, obj):
         return obj.animal_id
-    search_fields = ("animal_id__animal_id", "vision_test_result", "vision_test_type")
-    
+
 
 @admin.register(ViralInjection)
 class ViralInjectionAdmin(SimpleHistoryAdmin):
@@ -56,32 +85,42 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
         "surgery_date",
         "surgery_person",
         "notes",
-        "expression_pattern"
-    )
-    # Define how you want the animal ID column to display
-    @admin.display(description='Animal ID')
-    def get_animal_id(self, obj):
-        return obj.animal_id
-    
-    # Define how to get the Owner from the connected Animal model
-    @admin.display(description='Owner')
-    def get_owner(self, obj):
-        return obj.animal_id.owner
-    
-    # Define how to get the Injecting Person from the connected Animal model
-    @admin.display(description='Injecting Person')
-    def get_inj_person(self, obj):
-        return obj.injecting_person
-    
-    search_fields = (
-    "animal_id__animal_id",
-    "virus_name",
-    "virus_construct",
-    "injecting_person",
-    "surgery_person",
+        "expression_pattern",
     )
 
-    
+    list_filter = (
+        "animal_id",
+        "virus_name",
+        "virus_construct",
+        "injecting_person",
+        "injection_date",
+        "injection_site",
+        "surgery_date",
+        "surgery_person",
+        "expression_pattern",
+    )
+
+    search_fields = (
+        "animal_id__animal_id",
+        "virus_name",
+        "virus_construct",
+        "injecting_person",
+        "surgery_person",
+    )
+
+    @admin.display(description="Animal ID")
+    def get_animal_id(self, obj):
+        return obj.animal_id
+
+    @admin.display(description="Owner")
+    def get_owner(self, obj):
+        return obj.animal_id.owner
+
+    @admin.display(description="Injecting Person")
+    def get_inj_person(self, obj):
+        return obj.injecting_person
+
+
 @admin.register(TrackChanges)
 class TrackChangesAdmin(admin.ModelAdmin):
     list_display = (
@@ -105,7 +144,9 @@ class TrackChangesAdmin(admin.ModelAdmin):
         "changes",
     )
 
-    ordering = ("-changed_at",)
+    ordering = (
+        "-changed_at",
+    )
 
     readonly_fields = (
         "category",
