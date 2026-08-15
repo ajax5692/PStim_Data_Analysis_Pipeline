@@ -57,16 +57,17 @@ class AnalysisRun(models.Model):
         blank=True,
         null=True,
     )
+    
+    output_log_path = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Path to the pipeline log generated for this analysis run.",
+    )
 
     output_path = models.CharField(
         max_length=500,
         blank=True,
-    )
-    
-    parameter_log_path = models.CharField(
-        max_length=500,
-        blank=True,
-        help_text="Path to the Suite2p parameter log generated for this analysis run.",
+        help_text="Base directory containing Suite2p analysis outputs.",
     )
 
     notes = models.TextField(
