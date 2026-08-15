@@ -6,6 +6,20 @@
 
 <style>
   /* =========================================================
+       ANALYSIS RUNNING SPINNER
+       ========================================================= */
+
+  @keyframes analysis-spin {
+    0% {
+      transform: rotate(0deg);
+    }
+
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* =========================================================
        REMOVE LEFT SIDEBAR
        ========================================================= */
 
@@ -113,7 +127,7 @@
   }
 
   /* =========================================================
-       CHANGELIST SHOULD USE FULL VIEWPORT WIDTH
+       CHANGELIST FULL WIDTH
        ========================================================= */
 
   body.change-list #content {
@@ -142,7 +156,7 @@
   /* =========================================================
        MASTER LAYOUT
 
-       left = table/search/actions
+       left  = table/search/actions
        right = filter
        ========================================================= */
 
@@ -206,7 +220,7 @@
   }
 
   /* =========================================================
-       TABLE
+       RESULTS TABLE
        ========================================================= */
 
   .change-list #result_list {
@@ -235,51 +249,61 @@
        TABLE COLUMN WIDTHS
        ========================================================= */
 
+  /* Checkbox */
   .change-list #result_list th:nth-child(1),
   .change-list #result_list td:nth-child(1) {
     width: 2.5% !important;
   }
 
+  /* ID */
   .change-list #result_list th:nth-child(2),
   .change-list #result_list td:nth-child(2) {
     width: 3% !important;
   }
 
+  /* Animal ID */
   .change-list #result_list th:nth-child(3),
   .change-list #result_list td:nth-child(3) {
     width: 5% !important;
   }
 
+  /* Imaging session */
   .change-list #result_list th:nth-child(4),
   .change-list #result_list td:nth-child(4) {
     width: 8% !important;
   }
 
+  /* Status */
   .change-list #result_list th:nth-child(5),
   .change-list #result_list td:nth-child(5) {
     width: 6% !important;
   }
 
+  /* Frame rate */
   .change-list #result_list th:nth-child(6),
   .change-list #result_list td:nth-child(6) {
     width: 6.5% !important;
   }
 
+  /* Created at */
   .change-list #result_list th:nth-child(7),
   .change-list #result_list td:nth-child(7) {
     width: 11% !important;
   }
 
+  /* Started at */
   .change-list #result_list th:nth-child(8),
   .change-list #result_list td:nth-child(8) {
     width: 11% !important;
   }
 
+  /* Completed at */
   .change-list #result_list th:nth-child(9),
   .change-list #result_list td:nth-child(9) {
     width: 11% !important;
   }
 
+  /* Output Resource Path */
   .change-list #result_list th:nth-child(10),
   .change-list #result_list td:nth-child(10) {
     width: 36% !important;
@@ -297,7 +321,7 @@
   }
 
   /* =========================================================
-       FILTER — FIXED AT FAR RIGHT
+       FILTER
        ========================================================= */
 
   .change-list #changelist-filter {
@@ -345,6 +369,7 @@
     box-sizing: border-box !important;
   }
 </style>
+
 {% endblock %} {% block nav-global %}
 
 <div class="pstim-top-nav">
@@ -358,5 +383,137 @@
     <a href="/admin/auth/"> AUTHENTICATION AND AUTHORIZATION </a>
   </div>
 </div>
+
+{% endblock %} {% block footer %} {{ block.super }}
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    /*
+     * Only enable live polling on the AnalysisRun changelist.
+     *
+     * This prevents every Django Admin page from making
+     * background requests.
+     */
+    const isAnalysisRunPage = window.location.pathname.includes(
+      "/admin/imaging_analysis_metadata/analysisrun/",
+    );
+
+    const currentTable = document.querySelector("#result_list");
+
+    if (!isAnalysisRunPage || !currentTable) {
+      return;
+    }
+
+    /*
+     * Poll every 3 seconds.
+     */
+    const POLL_INTERVAL = 3000;
+
+    let pollInProgress = false;
+
+    async function refreshAnalysisRows() {
+      /*
+       * Avoid overlapping requests if the previous request
+       * takes longer than the polling interval.
+       */
+      if (pollInProgress) {
+        return;
+      }
+
+      /*
+       * If the user has selected rows for an Admin action,
+       * don't replace the table underneath them.
+       */
+      const selectedRows = document.querySelectorAll(
+        "#result_list input.action-select:checked",
+      );
+
+      if (selectedRows.length > 0) {
+        return;
+      }
+
+      /*
+       * Don't poll while the browser tab is hidden.
+       */
+      if (document.hidden) {
+        return;
+      }
+
+      pollInProgress = true;
+
+      try {
+        /*
+         * Request the exact current page, including any
+         * active search query or filters.
+         */
+        const response = await fetch(window.location.href, {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const html = await response.text();
+
+        const parser = new DOMParser();
+
+        const newDocument = parser.parseFromString(html, "text/html");
+
+        const currentBody = document.querySelector("#result_list tbody");
+
+        const newBody = newDocument.querySelector("#result_list tbody");
+
+        if (!currentBody || !newBody) {
+          return;
+        }
+
+        /*
+         * Only replace the rows when something has actually
+         * changed. This avoids unnecessary visual flicker.
+         */
+        if (currentBody.innerHTML !== newBody.innerHTML) {
+          currentBody.innerHTML = newBody.innerHTML;
+        }
+      } catch (error) {
+        /*
+         * A temporary polling failure should not interfere
+         * with the Admin page or the analysis itself.
+         */
+        console.debug(
+          "Analysis status polling temporarily unavailable:",
+          error,
+        );
+      } finally {
+        pollInProgress = false;
+      }
+    }
+
+    /*
+     * Start continuous lightweight polling.
+     */
+    const pollingTimer = setInterval(refreshAnalysisRows, POLL_INTERVAL);
+
+    /*
+     * When the user returns to this browser tab, immediately
+     * update the table rather than waiting for the next cycle.
+     */
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) {
+        refreshAnalysisRows();
+      }
+    });
+
+    /*
+     * Perform an initial refresh shortly after page load.
+     */
+    setTimeout(refreshAnalysisRows, 1000);
+  });
+</script>
 
 {% endblock %}
