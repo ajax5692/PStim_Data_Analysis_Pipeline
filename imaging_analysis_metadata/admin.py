@@ -12,7 +12,7 @@ class AnalysisRunAdmin(admin.ModelAdmin):
         "id",
         "animal_id",
         "imaging_session",
-        "status",
+        "display_status",
         "frame_rate",
         "created_at",
         "started_at",
@@ -40,42 +40,83 @@ class AnalysisRunAdmin(admin.ModelAdmin):
     def animal_id(self, obj):
         return obj.animal_id
 
+    @admin.display(description="Status", ordering="status")
+    def display_status(self, obj):
+        if obj.status == AnalysisRun.StatusChoices.RUNNING:
+            return format_html(
+                '<span style="display: inline-flex; align-items: center; gap: 6px;">'
+                    '<span>{}</span>'
+                    '<span style="'
+                        'width: 12px;'
+                        'height: 12px;'
+                        'border: 2px solid rgba(255,255,255,0.35);'
+                        'border-top-color: currentColor;'
+                        'border-radius: 50%;'
+                        'display: inline-block;'
+                        'animation: analysis-spin 0.8s linear infinite;'
+                        'flex-shrink: 0;'
+                    '"></span>'
+                '</span>',
+                obj.get_status_display(),
+            )
+
+        return obj.get_status_display()
+
     @admin.display(description="Output Resource Path")
     def display_output_resources(self, obj):
         output_path = obj.output_path
-
-        # Use the stored log path if available
         log_path = obj.output_log_path
 
-        # Fallback for older analysis runs where the log path
-        # was not yet stored in the database
+        # ---------------------------------------------------------
+        # Fallback for older AnalysisRun records where
+        # output_log_path was not stored in the database.
+        # ---------------------------------------------------------
         if not log_path and output_path:
-            candidate_log = Path(output_path) / "pipeline_log.txt"
+            output_dir = Path(output_path)
 
-            if candidate_log.exists():
-                log_path = str(candidate_log)
+            # First check the old log filename.
+            old_log = output_dir / "pipeline_log.txt"
+
+            if old_log.exists():
+                log_path = str(old_log)
+
+            else:
+                # Otherwise look for the new timestamped run logs.
+                run_logs = list(output_dir.glob("*_runlog.txt"))
+
+                if run_logs:
+                    # Use the most recently modified run log.
+                    newest_log = max(
+                        run_logs,
+                        key=lambda path: path.stat().st_mtime,
+                    )
+                    log_path = str(newest_log)
 
         log_text = log_path or "Not available"
         output_text = output_path or "Not available"
 
         return format_html(
-    '<div style="white-space: normal; min-width: 450px;">'
+            '<div style="white-space: normal; min-width: 450px;">'
 
-        '<div style="display: grid; grid-template-columns: max-content 1fr; '
-        'column-gap: 5px; align-items: start;">'
-            '<strong>• Log:</strong>'
-            '<span style="overflow-wrap: anywhere;">{}</span>'
-        '</div>'
+                '<div style="display: grid; '
+                'grid-template-columns: max-content 1fr; '
+                'column-gap: 5px; '
+                'align-items: start;">'
+                    '<strong>• Log:</strong>'
+                    '<span style="overflow-wrap: anywhere;">{}</span>'
+                '</div>'
 
-        '<div style="height: 8px;"></div>'
+                '<div style="height: 8px;"></div>'
 
-        '<div style="display: grid; grid-template-columns: max-content 1fr; '
-        'column-gap: 5px; align-items: start;">'
-            '<strong>• Suite2p:</strong>'
-            '<span style="overflow-wrap: anywhere;">{}</span>'
-        '</div>'
+                '<div style="display: grid; '
+                'grid-template-columns: max-content 1fr; '
+                'column-gap: 5px; '
+                'align-items: start;">'
+                    '<strong>• Suite2p:</strong>'
+                    '<span style="overflow-wrap: anywhere;">{}</span>'
+                '</div>'
 
-    '</div>',
-    log_text,
-    output_text,
-)
+            '</div>',
+            log_text,
+            output_text,
+        )
