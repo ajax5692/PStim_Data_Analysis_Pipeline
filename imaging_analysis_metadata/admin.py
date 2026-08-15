@@ -59,10 +59,23 @@ class AnalysisRunAdmin(admin.ModelAdmin):
         output_text = output_path or "Not available"
 
         return format_html(
-            '<div style="white-space: normal; min-width: 450px;">'
-            '• <strong>Log:</strong> {}<br>'
-            '• <strong>Suite2p:</strong> {}'
-            '</div>',
-            log_text,
-            output_text,
-        )
+    '<div style="white-space: normal; min-width: 450px;">'
+
+        '<div style="display: grid; grid-template-columns: max-content 1fr; '
+        'column-gap: 5px; align-items: start;">'
+            '<strong>• Log:</strong>'
+            '<span style="overflow-wrap: anywhere;">{}</span>'
+        '</div>'
+
+        '<div style="height: 8px;"></div>'
+
+        '<div style="display: grid; grid-template-columns: max-content 1fr; '
+        'column-gap: 5px; align-items: start;">'
+            '<strong>• Suite2p:</strong>'
+            '<span style="overflow-wrap: anywhere;">{}</span>'
+        '</div>'
+
+    '</div>',
+    log_text,
+    output_text,
+)
