@@ -102,13 +102,13 @@ def execute_analysis(analysis_run):
             float(result["frame_rate"]),
             2,
         )
-        analysis_run.parameter_log_path = result["parameter_log_path"]
+        analysis_run.output_log_path = result["parameter_log_path"]
         analysis_run.output_path = result["output_path"]
 
         analysis_run.save(
             update_fields=[
                 "frame_rate",
-                "parameter_log_path",
+                "output_log_path",
                 "output_path",
             ]
         )
