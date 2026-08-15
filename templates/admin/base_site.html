@@ -1,0 +1,362 @@
+{% extends "admin/base.html" %} {% block branding %}
+<div id="site-name">
+  <a href="{% url 'admin:index' %}"> Django administration </a>
+</div>
+{% endblock %} {% block extrastyle %} {{ block.super }}
+
+<style>
+  /* =========================================================
+       REMOVE LEFT SIDEBAR
+       ========================================================= */
+
+  #nav-sidebar,
+  #toggle-nav-sidebar {
+    display: none !important;
+  }
+
+  /* =========================================================
+       PAGE WIDTH
+       ========================================================= */
+
+  .main {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  #content {
+    width: 100% !important;
+    max-width: none !important;
+
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  #content-main {
+    width: 100% !important;
+    max-width: none !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* =========================================================
+       HEADER
+       ========================================================= */
+
+  #header {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  #branding {
+    order: 1 !important;
+    flex: 0 0 auto !important;
+  }
+
+  #user-tools {
+    order: 2 !important;
+
+    margin-left: auto !important;
+
+    flex: 0 0 auto !important;
+
+    text-align: right !important;
+    white-space: nowrap !important;
+  }
+
+  /* =========================================================
+       TOP APP NAVIGATION
+       ========================================================= */
+
+  .pstim-top-nav {
+    order: 3 !important;
+
+    flex: 0 0 100% !important;
+    width: 100% !important;
+
+    margin-top: 8px !important;
+
+    background: var(--body-bg);
+
+    border-top: 1px solid var(--hairline-color);
+    border-bottom: 1px solid var(--hairline-color);
+
+    box-sizing: border-box !important;
+  }
+
+  .pstim-top-nav-inner {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .pstim-top-nav a {
+    display: block;
+
+    padding: 12px 20px;
+
+    color: var(--body-fg);
+
+    text-decoration: none;
+    white-space: nowrap;
+
+    border-right: 1px solid var(--hairline-color);
+  }
+
+  .pstim-top-nav a:hover {
+    background: var(--darkened-bg);
+  }
+
+  /* =========================================================
+       CHANGELIST SHOULD USE FULL VIEWPORT WIDTH
+       ========================================================= */
+
+  body.change-list #content {
+    width: 100vw !important;
+    max-width: none !important;
+
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+
+    box-sizing: border-box !important;
+  }
+
+  body.change-list #content-main {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  body.change-list #changelist {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  /* =========================================================
+       MASTER LAYOUT
+
+       left = table/search/actions
+       right = filter
+       ========================================================= */
+
+  .change-list .changelist-form-container {
+    display: grid !important;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      120px !important;
+
+    column-gap: 18px !important;
+
+    width: 100% !important;
+    max-width: none !important;
+
+    align-items: start !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* =========================================================
+       LEFT MAIN COLUMN
+       ========================================================= */
+
+  .change-list .changelist-form-container > div {
+    grid-column: 1 !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .change-list #toolbar {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .change-list #changelist-form {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+
+    margin: 0 !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* =========================================================
+       RESULTS AREA
+       ========================================================= */
+
+  .change-list #changelist-form .results {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    overflow: visible !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* =========================================================
+       TABLE
+       ========================================================= */
+
+  .change-list #result_list {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    table-layout: fixed !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .change-list #result_list th,
+  .change-list #result_list td {
+    min-width: 0 !important;
+
+    box-sizing: border-box !important;
+
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+
+    white-space: nowrap !important;
+  }
+
+  /* =========================================================
+       TABLE COLUMN WIDTHS
+       ========================================================= */
+
+  .change-list #result_list th:nth-child(1),
+  .change-list #result_list td:nth-child(1) {
+    width: 2.5% !important;
+  }
+
+  .change-list #result_list th:nth-child(2),
+  .change-list #result_list td:nth-child(2) {
+    width: 3% !important;
+  }
+
+  .change-list #result_list th:nth-child(3),
+  .change-list #result_list td:nth-child(3) {
+    width: 5% !important;
+  }
+
+  .change-list #result_list th:nth-child(4),
+  .change-list #result_list td:nth-child(4) {
+    width: 8% !important;
+  }
+
+  .change-list #result_list th:nth-child(5),
+  .change-list #result_list td:nth-child(5) {
+    width: 6% !important;
+  }
+
+  .change-list #result_list th:nth-child(6),
+  .change-list #result_list td:nth-child(6) {
+    width: 6.5% !important;
+  }
+
+  .change-list #result_list th:nth-child(7),
+  .change-list #result_list td:nth-child(7) {
+    width: 11% !important;
+  }
+
+  .change-list #result_list th:nth-child(8),
+  .change-list #result_list td:nth-child(8) {
+    width: 11% !important;
+  }
+
+  .change-list #result_list th:nth-child(9),
+  .change-list #result_list td:nth-child(9) {
+    width: 11% !important;
+  }
+
+  .change-list #result_list th:nth-child(10),
+  .change-list #result_list td:nth-child(10) {
+    width: 36% !important;
+
+    white-space: normal !important;
+
+    overflow: visible !important;
+    text-overflow: clip !important;
+
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  /* =========================================================
+       FILTER — FIXED AT FAR RIGHT
+       ========================================================= */
+
+  .change-list #changelist-filter {
+    grid-column: 2 !important;
+
+    justify-self: end !important;
+
+    position: static !important;
+
+    width: 120px !important;
+    min-width: 120px !important;
+    max-width: 120px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .change-list #changelist-filter h2 {
+    padding: 7px 8px !important;
+  }
+
+  .change-list #changelist-filter h3 {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .change-list #changelist-filter ul {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .change-list #changelist-filter a {
+    overflow-wrap: anywhere !important;
+  }
+
+  /* =========================================================
+       ADMIN HOME MODULES
+       ========================================================= */
+
+  #content-main .module {
+    width: 100% !important;
+
+    box-sizing: border-box !important;
+  }
+</style>
+{% endblock %} {% block nav-global %}
+
+<div class="pstim-top-nav">
+  <div class="pstim-top-nav-inner">
+    <a href="/admin/animals_metadata/"> ANIMALS METADATA </a>
+
+    <a href="/admin/imaging_metadata/"> IMAGING METADATA </a>
+
+    <a href="/admin/imaging_analysis_metadata/"> IMAGING ANALYSIS METADATA </a>
+
+    <a href="/admin/auth/"> AUTHENTICATION AND AUTHORIZATION </a>
+  </div>
+</div>
+
+{% endblock %}
