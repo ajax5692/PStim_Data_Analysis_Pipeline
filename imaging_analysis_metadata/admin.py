@@ -34,6 +34,10 @@ class AnalysisRunAdmin(admin.ModelAdmin):
 
     readonly_fields = (
         "created_at",
+        "frame_rate",
+        "started_at",
+        "completed_at",
+        "display_output_resources",
     )
 
     @admin.display(description="Animal ID")
