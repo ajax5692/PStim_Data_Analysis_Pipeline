@@ -387,6 +387,95 @@
 
     box-sizing: border-box !important;
   }
+
+  /* =========================================================
+   ANIMALS TABLE — ANIMAL ID COLUMN
+   ========================================================= */
+
+  /* Only affect the Animal changelist */
+  body.app-animals_metadata.model-animal.change-list
+    #result_list
+    th:nth-child(2),
+  body.app-animals_metadata.model-animal.change-list
+    #result_list
+    td:nth-child(2) {
+    width: 110px !important;
+    min-width: 110px !important;
+  }
+
+  /* =========================================================
+   ANIMALS TABLE — OWNER COLUMN
+   ========================================================= */
+
+  /* Only affect the Owner changelist */
+  body.app-animals_metadata.model-animal.change-list
+    #result_list
+    th:nth-child(3),
+  body.app-animals_metadata.model-animal.change-list
+    #result_list
+    td:nth-child(3) {
+    width: 150px !important;
+    min-width: 150px !important;
+  }
+
+  /* =========================================================
+   ANIMALS TABLE — PROJECT ID COLUMN
+   ========================================================= */
+
+  /* Only affect the Project ID changelist */
+  body.app-animals_metadata.model-animal.change-list
+    #result_list
+    th:nth-child(8),
+  body.app-animals_metadata.model-animal.change-list
+    #result_list
+    td:nth-child(8) {
+    width: 300px !important;
+    min-width: 300px !important;
+  }
+
+  /* =========================================================
+   ANIMALS TABLE — AGE IN DAYS COLUMN
+   ========================================================= */
+
+  /* Column width */
+  body.app-animals_metadata.model-animal.change-list
+    #result_list
+    th.column-age_in_days,
+  body.app-animals_metadata.model-animal.change-list
+    #result_list
+    td.field-age_in_days {
+    width: 120px !important;
+    min-width: 120px !important;
+  }
+
+  /* Header */
+  body.app-animals_metadata.model-animal.change-list
+    #result_list
+    th.column-age_in_days {
+    text-align: left !important;
+  }
+
+  /* Django wraps the header text inside .text */
+  body.app-animals_metadata.model-animal.change-list
+    #result_list
+    th.column-age_in_days
+    .text
+    span,
+  body.app-animals_metadata.model-animal.change-list
+    #result_list
+    th.column-age_in_days
+    .text
+    a {
+    padding-left: 10px !important;
+  }
+
+  /* Values */
+  body.app-animals_metadata.model-animal.change-list
+    #result_list
+    td.field-age_in_days {
+    text-align: left !important;
+    padding-left: 20px !important;
+  }
 </style>
 {% endblock %} {% block nav-global %}
 <div class="pstim-top-nav">
