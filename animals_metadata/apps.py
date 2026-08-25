@@ -41,7 +41,8 @@ class AnimalsMetadataConfig(AppConfig):
                 "animals_metadata": 0,
                 "imaging_metadata": 1,
                 "imaging_analysis_metadata": 2,
-                "auth": 3,
+                "training_metadata": 3,
+                "auth": 4,
             }
 
             app_list.sort(
