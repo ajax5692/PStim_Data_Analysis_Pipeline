@@ -37,7 +37,9 @@ class AnalysisRunAdmin(admin.ModelAdmin):
         "frame_rate",
         "started_at",
         "completed_at",
-        "display_output_resources",
+        "output_log_path",
+        "output_path",
+        "error_message",
     )
 
     @admin.display(description="Animal ID")
