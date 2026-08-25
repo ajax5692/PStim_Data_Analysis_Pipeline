@@ -73,30 +73,152 @@ class VisionCheck(models.Model):
         verbose_name_plural = "Vision Check"
     
 class ViralInjection(models.Model):
-    
+
     animal_id = models.ForeignKey(
         Animal,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
     )
-    
+
     class VirusChoices(models.TextChoices):
-        AAV322 = 'AAV322', 'AAV322'
-        AAV418  = 'AAV418', 'AAV418'
-        
+        AAV322 = "AAV322", "AAV322"
+        AAV418 = "AAV418", "AAV418"
+
     class InjectionSiteChoices(models.TextChoices):
-        V1 = 'V1', 'V1'
-    
-    virus_id = models.CharField(max_length=100,choices=VirusChoices.choices)
-    injection_date = models.DateField(verbose_name="Inj. Date")
-    injecting_person = models.CharField(max_length=100,choices=Animal.OwnerChoices.choices, null=True, blank=True)
-    injection_site = models.CharField(max_length=100,choices=InjectionSiteChoices.choices,verbose_name="Inj. Site")
-    volume_ul = models.FloatField(verbose_name="Volume (nL)")
-    surgery_date = models.DateField(null=True, blank=True)
-    surgery_person = models.CharField(max_length=100,choices=Animal.OwnerChoices.choices, null=True, blank=True)
-    notes = models.TextField(blank=True, null=True)
-    expression = models.TextField(blank=True, null=True,verbose_name="Expression (Checkup MESc file)")
+        V1 = "V1", "V1"
+
+    # ---------------------------------------------------------
+    # VIRUS 1
+    # ---------------------------------------------------------
+
+    virus_id = models.CharField(
+        max_length=100,
+        choices=VirusChoices.choices,
+        verbose_name="Virus ID 1",
+    )
+
+    volume_ul = models.FloatField(
+        verbose_name="Volume 1 (nL)",
+    )
+
+    site = models.CharField(
+        max_length=100,
+        choices=InjectionSiteChoices.choices,
+        blank=True,
+        null=True,
+        verbose_name="Injection Site 1",
+    )
+
+    depth = models.FloatField(
+        verbose_name="Depth 1 (μm)",
+        blank=True,
+        null=True,
+    )
+
+
+    # ---------------------------------------------------------
+    # VIRUS 2
+    # ---------------------------------------------------------
+
+    virus_id_2 = models.CharField(
+        max_length=100,
+        choices=VirusChoices.choices,
+        blank=True,
+        null=True,
+        verbose_name="Virus ID 2",
+    )
+
+    volume_nl_2 = models.FloatField(
+        blank=True,
+        null=True,
+        verbose_name="Volume 2 (nL)",
+    )
+
+    site_2 = models.CharField(
+        max_length=100,
+        choices=InjectionSiteChoices.choices,
+        blank=True,
+        null=True,
+        verbose_name="Injection Site 2",
+    )
+
+    depth_2 = models.FloatField(
+        blank=True,
+        null=True,
+        verbose_name="Depth 2 (μm)",
+    )
+
+
+    # ---------------------------------------------------------
+    # VIRUS 3
+    # ---------------------------------------------------------
+
+    virus_id_3 = models.CharField(
+        max_length=100,
+        choices=VirusChoices.choices,
+        blank=True,
+        null=True,
+        verbose_name="Virus ID 3",
+    )
+
+    volume_nl_3 = models.FloatField(
+        blank=True,
+        null=True,
+        verbose_name="Volume 3 (nL)",
+    )
+
+    site_3 = models.CharField(
+        max_length=100,
+        choices=InjectionSiteChoices.choices,
+        blank=True,
+        null=True,
+        verbose_name="Injection Site 3",
+    )
+
+    depth_3 = models.FloatField(
+        blank=True,
+        null=True,
+        verbose_name="Depth 3 (μm)",
+    )
+    # ---------------------------------------------------------
+    # INJECTION METADATA
+    # ---------------------------------------------------------
+
+    injection_date = models.DateField(
+        verbose_name="Inj. Date",
+    )
+
+    injecting_person = models.CharField(
+        max_length=100,
+        choices=Animal.OwnerChoices.choices,
+        null=True,
+        blank=True,
+    )
+
+    surgery_date = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    surgery_person = models.CharField(
+        max_length=100,
+        choices=Animal.OwnerChoices.choices,
+        null=True,
+        blank=True,
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True,
+    )
+
+    expression = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Expression (Checkup MESc file)",
+    )
+
     history = HistoricalRecords()
-    
+
     class Meta:
         verbose_name = "Viral Injections"
         verbose_name_plural = "Viral Injections"

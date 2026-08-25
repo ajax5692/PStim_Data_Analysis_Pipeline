@@ -118,7 +118,7 @@ class AnalysisRunAdmin(admin.ModelAdmin):
                 'grid-template-columns: max-content 1fr; '
                 'column-gap: 5px; '
                 'align-items: start;">'
-                    '<strong>• Suite2p:</strong>'
+                    '<strong>• Suite2P:</strong>'
                     '<span style="overflow-wrap: anywhere;">{}</span>'
                 '</div>'
 
