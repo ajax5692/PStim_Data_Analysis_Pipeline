@@ -140,6 +140,55 @@
   }
 
   /* =========================================================
+     APP INDEX PAGES
+
+     Applies only to pages such as:
+       /admin/animals_metadata/
+       /admin/imaging_metadata/
+       /admin/training_metadata/
+
+     Does NOT affect:
+       /admin/animals_metadata/animal/
+       /admin/imaging_metadata/imagingsession/
+       etc.
+     ========================================================= */
+
+  /*
+   * Hide:
+   *
+   *   ANIMALS METADATA administration
+   *
+   * or equivalent app title.
+   */
+  body.pstim-app-index #content > h1,
+  body.pstim-app-index #content h1 {
+    display: none !important;
+  }
+
+  /*
+   * Hide the blue repeated app-name bar:
+   *
+   *   ANIMALS METADATA
+   */
+  body.pstim-app-index #content-main .module caption,
+  body.pstim-app-index #content-main .module h2 {
+    display: none !important;
+  }
+
+  /*
+   * Remove spacing that would otherwise remain after
+   * hiding the two headings.
+   */
+  body.pstim-app-index #content {
+    padding-top: 12px !important;
+  }
+
+  body.pstim-app-index #content-main,
+  body.pstim-app-index #content-main .module {
+    margin-top: 0 !important;
+  }
+
+  /* =========================================================
      CHANGELIST FULL WIDTH
      ========================================================= */
 
@@ -168,17 +217,6 @@
 
   /* =========================================================
      MASTER TABLE + FILTER LAYOUT
-
-     The filter width is now responsive.
-
-     Narrow viewport:
-       about 150px
-
-     Medium viewport:
-       about 15vw
-
-     Wide viewport:
-       maximum 240px
      ========================================================= */
 
   .change-list .changelist-form-container {
@@ -206,7 +244,6 @@
     grid-column: 1 !important;
 
     width: 100% !important;
-
     min-width: 0 !important;
     max-width: none !important;
 
@@ -215,13 +252,11 @@
 
   .change-list #toolbar {
     width: 100% !important;
-
     box-sizing: border-box !important;
   }
 
   .change-list #changelist-form {
     width: 100% !important;
-
     min-width: 0 !important;
     max-width: none !important;
 
@@ -244,12 +279,11 @@
   }
 
   /* =========================================================
-     RESULTS TABLE
+     DEFAULT TABLE BEHAVIOUR
      ========================================================= */
 
   .change-list #result_list {
     width: 100% !important;
-
     min-width: 0 !important;
     max-width: 100% !important;
 
@@ -271,59 +305,87 @@
   }
 
   /* =========================================================
-     ANALYSIS RUN TABLE COLUMN WIDTHS
-
-     These rules only affect the AnalysisRun changelist because
-     they depend on that table having ten columns.
+     ANALYSIS RUN TABLE ONLY
      ========================================================= */
 
-  .change-list #result_list th:nth-child(1),
-  .change-list #result_list td:nth-child(1) {
-    width: 2.5% !important;
-  }
-
-  .change-list #result_list th:nth-child(2),
-  .change-list #result_list td:nth-child(2) {
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    th:nth-child(2),
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    td:nth-child(2) {
     width: 3% !important;
   }
 
-  .change-list #result_list th:nth-child(3),
-  .change-list #result_list td:nth-child(3) {
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    th:nth-child(3),
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    td:nth-child(3) {
     width: 5% !important;
   }
 
-  .change-list #result_list th:nth-child(4),
-  .change-list #result_list td:nth-child(4) {
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    th:nth-child(4),
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    td:nth-child(4) {
     width: 8% !important;
   }
 
-  .change-list #result_list th:nth-child(5),
-  .change-list #result_list td:nth-child(5) {
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    th:nth-child(5),
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    td:nth-child(5) {
     width: 6% !important;
   }
 
-  .change-list #result_list th:nth-child(6),
-  .change-list #result_list td:nth-child(6) {
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    th:nth-child(6),
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    td:nth-child(6) {
     width: 6.5% !important;
   }
 
-  .change-list #result_list th:nth-child(7),
-  .change-list #result_list td:nth-child(7) {
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    th:nth-child(7),
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    td:nth-child(7) {
     width: 11% !important;
   }
 
-  .change-list #result_list th:nth-child(8),
-  .change-list #result_list td:nth-child(8) {
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    th:nth-child(8),
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    td:nth-child(8) {
     width: 11% !important;
   }
 
-  .change-list #result_list th:nth-child(9),
-  .change-list #result_list td:nth-child(9) {
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    th:nth-child(9),
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    td:nth-child(9) {
     width: 11% !important;
   }
 
-  .change-list #result_list th:nth-child(10),
-  .change-list #result_list td:nth-child(10) {
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    th:last-child,
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    td:last-child {
     width: 36% !important;
 
     white-space: normal !important;
@@ -350,7 +412,6 @@
     position: static !important;
 
     width: 100% !important;
-
     min-width: 0 !important;
     max-width: none !important;
 
@@ -389,10 +450,9 @@
   }
 
   /* =========================================================
-   ANIMALS TABLE — ANIMAL ID COLUMN
-   ========================================================= */
+     ANIMALS TABLE — ANIMAL ID COLUMN
+     ========================================================= */
 
-  /* Only affect the Animal changelist */
   body.app-animals_metadata.model-animal.change-list
     #result_list
     th:nth-child(2),
@@ -404,10 +464,9 @@
   }
 
   /* =========================================================
-   ANIMALS TABLE — OWNER COLUMN
-   ========================================================= */
+     ANIMALS TABLE — OWNER COLUMN
+     ========================================================= */
 
-  /* Only affect the Owner changelist */
   body.app-animals_metadata.model-animal.change-list
     #result_list
     th:nth-child(3),
@@ -419,10 +478,9 @@
   }
 
   /* =========================================================
-   ANIMALS TABLE — PROJECT ID COLUMN
-   ========================================================= */
+     ANIMALS TABLE — PROJECT ID COLUMN
+     ========================================================= */
 
-  /* Only affect the Project ID changelist */
   body.app-animals_metadata.model-animal.change-list
     #result_list
     th:nth-child(8),
@@ -434,10 +492,9 @@
   }
 
   /* =========================================================
-   ANIMALS TABLE — AGE IN DAYS COLUMN
-   ========================================================= */
+     ANIMALS TABLE — AGE IN DAYS COLUMN
+     ========================================================= */
 
-  /* Column width */
   body.app-animals_metadata.model-animal.change-list
     #result_list
     th.column-age_in_days,
@@ -448,14 +505,12 @@
     min-width: 120px !important;
   }
 
-  /* Header */
   body.app-animals_metadata.model-animal.change-list
     #result_list
     th.column-age_in_days {
     text-align: left !important;
   }
 
-  /* Django wraps the header text inside .text */
   body.app-animals_metadata.model-animal.change-list
     #result_list
     th.column-age_in_days
@@ -469,15 +524,397 @@
     padding-left: 10px !important;
   }
 
-  /* Values */
   body.app-animals_metadata.model-animal.change-list
     #result_list
     td.field-age_in_days {
     text-align: left !important;
     padding-left: 20px !important;
   }
+
+  /* =========================================================
+     ANIMALS TABLE — STATUS COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-animal.change-list
+    #result_list
+    th:nth-child(11),
+  body.app-animals_metadata.model-animal.change-list
+    #result_list
+    td:nth-child(11) {
+    width: 70px !important;
+    min-width: 70px !important;
+  }
+
+  /* =========================================================
+     VIRAL INJECTIONS TABLE — ANIMAL ID COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    th.column-get_animal_id,
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    td.field-get_animal_id {
+    width: 80px !important;
+    min-width: 80px !important;
+    max-width: 80px !important;
+  }
+
+  /* =========================================================
+     VIRAL INJECTIONS TABLE — OWNER COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    th.column-get_owner,
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    td.field-get_owner {
+    width: 60px !important;
+    min-width: 60px !important;
+    max-width: 60px !important;
+  }
+
+  /* =========================================================
+     VIRAL INJECTIONS TABLE — VIRUS ID COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    th.column-virus_id,
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    td.field-virus_id {
+    width: 80px !important;
+    min-width: 80px !important;
+    max-width: 80px !important;
+  }
+
+  /* =========================================================
+     VIRAL INJECTIONS TABLE — INJECTING PERSON COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    th.column-get_inj_person,
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    td.field-get_inj_person {
+    width: 80px !important;
+    min-width: 80px !important;
+    max-width: 80px !important;
+  }
+
+  /* =========================================================
+     VIRAL INJECTIONS TABLE — INJECTION DATE COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    th.column-injection_date,
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    td.field-injection_date {
+    width: 100px !important;
+    min-width: 100px !important;
+    max-width: 100px !important;
+  }
+
+  /* =========================================================
+     VIRAL INJECTIONS TABLE — INJECTION SITE COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    th.column-injection_site,
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    td.field-injection_site {
+    width: 60px !important;
+    min-width: 60px !important;
+    max-width: 60px !important;
+  }
+
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    td.field-injection_site {
+    text-align: left !important;
+    padding-left: 12px !important;
+  }
+
+  /* =========================================================
+   VIRAL INJECTIONS TABLE — VOLUME COLUMN
+   ========================================================= */
+
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    th.column-display_volume,
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    td.field-display_volume {
+    width: 80px !important;
+    min-width: 80px !important;
+    max-width: 80px !important;
+  }
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    th.column-display_volume
+    .text {
+    text-transform: none !important;
+  }
+
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    th.column-display_volume
+    .text
+    a,
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    th.column-display_volume
+    .text
+    span {
+    text-transform: none !important;
+  }
+
+  /* =========================================================
+     VIRAL INJECTIONS TABLE — SURGERY DATE COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    th.column-surgery_date,
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    td.field-surgery_date {
+    width: 100px !important;
+    min-width: 100px !important;
+    max-width: 100px !important;
+  }
+
+  /* =========================================================
+     VIRAL INJECTIONS TABLE — SURGERY PERSON COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    th.column-get_surgery_person,
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    td.field-get_surgery_person {
+    width: 80px !important;
+    min-width: 80px !important;
+    max-width: 80px !important;
+  }
+
+  /* =========================================================
+     VIRAL INJECTIONS TABLE — EXPRESSION COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    th.column-expression,
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    td.field-expression {
+    width: 600px !important;
+    min-width: 600px !important;
+    max-width: 600px !important;
+  }
+
+  /* =========================================================
+     VISION CHECK TABLE — ANIMAL ID COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-visioncheck.change-list
+    #result_list
+    th.column-get_animal_id,
+  body.app-animals_metadata.model-visioncheck.change-list
+    #result_list
+    td.field-get_animal_id {
+    width: 100px !important;
+    min-width: 100px !important;
+    max-width: 100px !important;
+  }
+
+  /* =========================================================
+     VISION CHECK TABLE — VISION TEST TYPE COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-visioncheck.change-list
+    #result_list
+    th.column-vision_test_type,
+  body.app-animals_metadata.model-visioncheck.change-list
+    #result_list
+    td.field-vision_test_type {
+    width: 150px !important;
+    min-width: 150px !important;
+    max-width: 150px !important;
+  }
+
+  /* =========================================================
+     VISION CHECK TABLE — VISION TEST RESULT COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-visioncheck.change-list
+    #result_list
+    th.column-vision_test_result,
+  body.app-animals_metadata.model-visioncheck.change-list
+    #result_list
+    td.field-vision_test_result {
+    width: 150px !important;
+    min-width: 150px !important;
+    max-width: 150px !important;
+  }
+
+  /* =========================================================
+     VISION CHECK TABLE — DATA PATH COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-visioncheck.change-list
+    #result_list
+    th.column-data_path,
+  body.app-animals_metadata.model-visioncheck.change-list
+    #result_list
+    td.field-data_path {
+    width: 900px !important;
+    min-width: 900px !important;
+    max-width: 900px !important;
+  }
+
+  /* =========================================================
+     IMAGING SESSIONS — ACQUISITION DATE
+     ========================================================= */
+
+  body.app-imaging_metadata.model-imagingsession.change-list
+    #result_list
+    th.column-acquisition_date,
+  body.app-imaging_metadata.model-imagingsession.change-list
+    #result_list
+    td.field-acquisition_date {
+    padding-right: 20px !important;
+    width: 8% !important;
+  }
+
+  /* =========================================================
+     IMAGING SESSIONS — IMAGING REGION
+     ========================================================= */
+
+  body.app-imaging_metadata.model-imagingsession.change-list
+    #result_list
+    th.column-imaging_region,
+  body.app-imaging_metadata.model-imagingsession.change-list
+    #result_list
+    td.field-imaging_region {
+    width: 8% !important;
+    /* min-width: 100px !important; */
+  }
+
+  body.app-imaging_metadata.model-imagingsession.change-list
+    #result_list
+    td.field-imaging_region {
+    text-align: left !important;
+    padding-left: 10px !important;
+  }
+
+  /* =========================================================
+     IMAGING SESSIONS — MEASUREMENT UNIT RANGES
+     ========================================================= */
+
+  body.app-imaging_metadata.model-imagingsession.change-list
+    #result_list
+    th.column-measurement_unit_ranges,
+  body.app-imaging_metadata.model-imagingsession.change-list
+    #result_list
+    td.field-measurement_unit_ranges {
+    width: 15% !important;
+    /* min-width: 100px !important; */
+
+    white-space: normal !important;
+
+    overflow: visible !important;
+    text-overflow: clip !important;
+
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+
+  body.app-imaging_metadata.model-imagingsession.change-list
+    #result_list
+    td.field-measurement_unit_ranges {
+    text-align: left !important;
+    padding-left: 10px !important;
+  }
+
+  /* =========================================================
+     IMAGING SESSIONS — MESC FILEPATH
+     ========================================================= */
+
+  body.app-imaging_metadata.model-imagingsession.change-list
+    #result_list
+    th.column-mesc_file_path,
+  body.app-imaging_metadata.model-imagingsession.change-list
+    #result_list
+    td.field-mesc_file_path {
+    width: 60% !important;
+    min-width: 300px !important;
+
+    white-space: normal !important;
+
+    overflow: visible !important;
+    text-overflow: clip !important;
+
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+
+  body.app-imaging_metadata.model-imagingsession.change-list
+    #result_list
+    td.field-mesc_file_path {
+    text-align: left !important;
+    padding-left: 10px !important;
+  }
+
+  /* =========================================================
+   ALL DJANGO ADMIN TABLES — CHECKBOX COLUMN
+   ========================================================= */
+
+  /*
+ * Keep the selection checkbox column at a consistent,
+ * readable width on every changelist.
+ */
+  .change-list #result_list th.action-checkbox-column,
+  .change-list #result_list td.action-checkbox {
+    width: 50px !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+
+    text-align: center !important;
+
+    overflow: visible !important;
+    text-overflow: clip !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* Keep the actual checkbox from being compressed */
+  .change-list #result_list input.action-select[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+
+    min-width: 16px !important;
+    min-height: 16px !important;
+
+    margin: 0 auto !important;
+
+    display: block !important;
+  }
 </style>
+
 {% endblock %} {% block nav-global %}
+
 <div class="pstim-top-nav">
   <div class="pstim-top-nav-inner">
     <a href="/admin/animals_metadata/"> ANIMALS METADATA </a>
@@ -491,11 +928,42 @@
     <a href="/admin/auth/"> AUTHENTICATION AND AUTHORIZATION </a>
   </div>
 </div>
+
 {% endblock %} {% block footer %} {{ block.super }}
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    const isAnalysisRunPage = window.location.pathname.includes(
+    /* =======================================================
+       DETECT DJANGO APP INDEX PAGES
+       ======================================================= */
+
+    /*
+     * Examples that SHOULD match:
+     *
+     *   /admin/animals_metadata/
+     *   /admin/imaging_metadata/
+     *   /admin/training_metadata/
+     *
+     * Examples that should NOT match:
+     *
+     *   /admin/
+     *   /admin/animals_metadata/animal/
+     *   /admin/imaging_metadata/imagingsession/
+     */
+
+    const path = window.location.pathname;
+
+    const isAppIndexPage = /^\/admin\/[^/]+\/$/.test(path);
+
+    if (isAppIndexPage) {
+      document.body.classList.add("pstim-app-index");
+    }
+
+    /* =======================================================
+       ANALYSIS RUN LIVE POLLING
+       ======================================================= */
+
+    const isAnalysisRunPage = path.includes(
       "/admin/imaging_analysis_metadata/analysisrun/",
     );
 
@@ -580,4 +1048,5 @@
     setTimeout(refreshAnalysisRows, 1000);
   });
 </script>
+
 {% endblock %}

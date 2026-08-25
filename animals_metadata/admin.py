@@ -76,36 +76,28 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
     list_display = (
         "get_animal_id",
         "get_owner",
-        "virus_name",
-        "virus_construct",
+        "virus_id",
         "get_inj_person",
         "injection_date",
         "injection_site",
-        "volume_ul",
+        "display_volume",
         "surgery_date",
-        "surgery_person",
+        "get_surgery_person",
+        "expression",
         "notes",
-        "expression_pattern",
     )
 
     list_filter = (
         "animal_id",
-        "virus_name",
-        "virus_construct",
+        "virus_id",
         "injecting_person",
-        "injection_date",
         "injection_site",
-        "surgery_date",
-        "surgery_person",
-        "expression_pattern",
     )
 
     search_fields = (
         "animal_id__animal_id",
-        "virus_name",
-        "virus_construct",
+        "virus_id",
         "injecting_person",
-        "surgery_person",
     )
 
     @admin.display(description="Animal ID")
@@ -116,9 +108,17 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
     def get_owner(self, obj):
         return obj.animal_id.owner
 
-    @admin.display(description="Injecting Person")
+    @admin.display(description="Inj. Person")
     def get_inj_person(self, obj):
         return obj.injecting_person
+    
+    @admin.display(description="VOLUME (nL)", ordering="volume_ul")
+    def display_volume(self, obj):
+        return obj.volume_ul
+    
+    @admin.display(description="Sur. Person")
+    def get_surgery_person(self, obj):
+        return obj.surgery_person
 
 
 @admin.register(TrackChanges)

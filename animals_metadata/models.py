@@ -83,22 +83,18 @@ class ViralInjection(models.Model):
         AAV322 = 'AAV322', 'AAV322'
         AAV418  = 'AAV418', 'AAV418'
         
-    class VirusConstructChoices(models.TextChoices):
-        VIRUS_1 = 'AAV9-hSyn-DIO-jGCaMP8s-P2A-ChrimsonR-ST', 'AAV9-hSyn-DIO-jGCaMP8s-P2A-ChrimsonR-ST'
-    
     class InjectionSiteChoices(models.TextChoices):
         V1 = 'V1', 'V1'
     
-    virus_name = models.CharField(max_length=100,choices=VirusChoices.choices)
-    virus_construct = models.CharField(max_length=100,choices=VirusConstructChoices.choices)
-    injection_date = models.DateField()
+    virus_id = models.CharField(max_length=100,choices=VirusChoices.choices)
+    injection_date = models.DateField(verbose_name="Inj. Date")
     injecting_person = models.CharField(max_length=100,choices=Animal.OwnerChoices.choices, null=True, blank=True)
-    injection_site = models.CharField(max_length=100,choices=InjectionSiteChoices.choices)
+    injection_site = models.CharField(max_length=100,choices=InjectionSiteChoices.choices,verbose_name="Inj. Site")
     volume_ul = models.FloatField(verbose_name="Volume (nL)")
     surgery_date = models.DateField(null=True, blank=True)
     surgery_person = models.CharField(max_length=100,choices=Animal.OwnerChoices.choices, null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
-    expression_pattern = models.TextField(blank=True, null=True)
+    expression = models.TextField(blank=True, null=True,verbose_name="Expression (Checkup MESc file)")
     history = HistoricalRecords()
     
     class Meta:
