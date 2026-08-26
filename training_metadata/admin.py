@@ -1,7 +1,7 @@
 from django.contrib import admin
 from simple_history.admin import SimpleHistoryAdmin
 
-from .models import TrackChanges, TrainingSession
+from .models import MouseBodyWeightRecord, TrackChanges, TrainingSession
 
 
 @admin.register(TrainingSession)
@@ -27,6 +27,53 @@ class TrainingSessionAdmin(SimpleHistoryAdmin):
     )
 
     ordering = ("-training_date",)
+
+
+@admin.register(MouseBodyWeightRecord)
+class MouseBodyWeightRecordAdmin(SimpleHistoryAdmin):
+    list_display = (
+        "get_mouse_id",
+        "get_owner",
+        "date",
+        "body_weight_g",
+        "display_percent_body_weight",
+        "notes",
+    )
+
+    list_filter = (
+        "animal",
+        "animal__owner",
+        "date",
+    )
+
+    search_fields = (
+        "animal__animal_id",
+        "animal__owner",
+        "notes",
+    )
+
+    ordering = (
+        "-date",
+        "animal",
+    )
+
+    readonly_fields = (
+        "percent_body_weight",
+    )
+
+    @admin.display(description="Mouse ID", ordering="animal__animal_id")
+    def get_mouse_id(self, obj):
+        return obj.animal.animal_id if obj.animal else "-"
+
+    @admin.display(description="Owner", ordering="animal__owner")
+    def get_owner(self, obj):
+        return obj.animal.owner if obj.animal else "-"
+
+    @admin.display(description="% Body Weight Compared to Start", ordering="percent_body_weight")
+    def display_percent_body_weight(self, obj):
+        if obj.percent_body_weight is not None:
+            return f"{obj.percent_body_weight:.1f} %"
+        return "-"
 
 
 from animals_metadata.utils import get_user_initials
