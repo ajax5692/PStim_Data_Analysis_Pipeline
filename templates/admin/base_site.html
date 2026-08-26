@@ -140,6 +140,87 @@
   }
 
   /* =========================================================
+     TOP APP NAVIGATION — DROPDOWNS
+     ========================================================= */
+
+  .pstim-nav-item {
+    position: relative;
+    flex: 0 0 auto;
+  }
+
+  .pstim-nav-item > a {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pstim-nav-caret {
+    font-size: 10px;
+    line-height: 1;
+    opacity: 0.75;
+    transition: transform 0.15s ease;
+  }
+
+  .pstim-nav-item:hover .pstim-nav-caret,
+  .pstim-nav-item:focus-within .pstim-nav-caret {
+    transform: rotate(180deg);
+  }
+
+  .pstim-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+
+    display: none;
+
+    min-width: 220px;
+    padding: 6px 0;
+
+    background: var(--body-bg);
+
+    border: 1px solid var(--hairline-color);
+    border-top: 0;
+
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+
+    z-index: 10000;
+  }
+
+  .pstim-nav-item:hover > .pstim-dropdown,
+  .pstim-nav-item:focus-within > .pstim-dropdown {
+    display: block;
+  }
+
+  .pstim-dropdown a {
+    display: block;
+
+    padding: 9px 14px;
+
+    border-right: 0 !important;
+
+    color: var(--body-fg);
+
+    background: var(--body-bg);
+
+    white-space: nowrap;
+  }
+
+  .pstim-dropdown a:hover,
+  .pstim-dropdown a:focus {
+    background: var(--darkened-bg);
+  }
+
+  /*
+   * Allow dropdowns to extend below the navigation bar.
+   * Horizontal scrolling remains available if the app list
+   * becomes wider than the viewport.
+   */
+  .pstim-top-nav,
+  .pstim-top-nav-inner {
+    overflow: visible !important;
+  }
+
+  /* =========================================================
      APP INDEX PAGES
 
      Applies only to pages such as:
@@ -951,11 +1032,46 @@
 
 <div class="pstim-top-nav">
   <div class="pstim-top-nav-inner">
-    <a href="/admin/animals_metadata/"> ANIMALS METADATA </a>
+    <div class="pstim-nav-item">
+      <a href="/admin/animals_metadata/">
+        ANIMALS METADATA
+        <span class="pstim-nav-caret" aria-hidden="true">▼</span>
+      </a>
 
-    <a href="/admin/imaging_metadata/"> IMAGING METADATA </a>
+      <div class="pstim-dropdown">
+        <a href="/admin/animals_metadata/animal/"> Animals </a>
 
-    <a href="/admin/imaging_analysis_metadata/"> IMAGING ANALYSIS METADATA </a>
+        <a href="/admin/animals_metadata/visioncheck/"> Vision Checks </a>
+
+        <a href="/admin/animals_metadata/viralinjection/"> Viral Injections </a>
+
+        <a href="/admin/animals_metadata/trackchanges/"> Track Changes </a>
+      </div>
+    </div>
+
+    <div class="pstim-nav-item">
+      <a href="/admin/imaging_metadata/">
+        IMAGING METADATA
+        <span class="pstim-nav-caret" aria-hidden="true">▼</span>
+      </a>
+
+      <div class="pstim-dropdown">
+        <a href="/admin/imaging_metadata/imagingsession/"> Imaging Sessions </a>
+      </div>
+    </div>
+
+    <div class="pstim-nav-item">
+      <a href="/admin/imaging_analysis_metadata/">
+        IMAGING ANALYSIS METADATA
+        <span class="pstim-nav-caret" aria-hidden="true">▼</span>
+      </a>
+
+      <div class="pstim-dropdown">
+        <a href="/admin/imaging_analysis_metadata/analysisrun/">
+          Analysis Runs
+        </a>
+      </div>
+    </div>
 
     <a href="/admin/training_metadata/"> TRAINING METADATA </a>
 
