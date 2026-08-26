@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'imaging_metadata',
     'imaging_analysis_metadata',
     'training_metadata',
+    'virus_metadata',
 ]
 
 MIDDLEWARE = [

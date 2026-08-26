@@ -756,9 +756,26 @@
   body.app-animals_metadata.model-viralinjection.change-list
     #result_list
     td.field-display_expression_mescfile_path {
-    width: 600px !important;
-    /* min-width: 800px !important; */
-    /* max-width: 600px !important; */
+    width: 400px !important;
+    min-width: 200px !important;
+    max-width: 400px !important;
+  }
+
+  /* =========================================================
+     VIRAL INJECTIONS TABLE — NOTES COLUMN
+     ========================================================= */
+
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    th.column-notes,
+  body.app-animals_metadata.model-viralinjection.change-list
+    #result_list
+    td.field-notes {
+    width: 450px !important;
+    min-width: 300px !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    line-height: 1.4 !important;
   }
 
   /* =========================================================
@@ -915,6 +932,59 @@
   }
 
   /* =========================================================
+     VIRUS METADATA TABLE — VIRUSES
+     ========================================================= */
+
+  body.app-virus_metadata.model-virus.change-list
+    #result_list
+    th.column-virus_id,
+  body.app-virus_metadata.model-virus.change-list
+    #result_list
+    td.field-virus_id {
+    width: 120px !important;
+    min-width: 100px !important;
+    max-width: 140px !important;
+  }
+
+  body.app-virus_metadata.model-virus.change-list
+    #result_list
+    th.column-viral_construct,
+  body.app-virus_metadata.model-virus.change-list
+    #result_list
+    td.field-viral_construct {
+    width: 40% !important;
+    min-width: 250px !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  body.app-virus_metadata.model-virus.change-list #result_list th.column-titre,
+  body.app-virus_metadata.model-virus.change-list #result_list td.field-titre {
+    width: 160px !important;
+    min-width: 130px !important;
+  }
+
+  body.app-virus_metadata.model-virus.change-list
+    #result_list
+    th.column-location_in_fridge,
+  body.app-virus_metadata.model-virus.change-list
+    #result_list
+    td.field-location_in_fridge {
+    width: 220px !important;
+    min-width: 180px !important;
+  }
+
+  body.app-virus_metadata.model-virus.change-list
+    #result_list
+    th.column-virus_owner,
+  body.app-virus_metadata.model-virus.change-list
+    #result_list
+    td.field-virus_owner {
+    width: 110px !important;
+    min-width: 90px !important;
+  }
+
+  /* =========================================================
      TRACK CHANGES TABLE (ALL APPS)
      ========================================================= */
 
@@ -926,7 +996,9 @@
   }
 
   body.model-trackchanges.change-list #result_list th.column-animal_id,
-  body.model-trackchanges.change-list #result_list td.field-animal_id {
+  body.model-trackchanges.change-list #result_list td.field-animal_id,
+  body.model-trackchanges.change-list #result_list th.column-get_virus_id,
+  body.model-trackchanges.change-list #result_list td.field-get_virus_id {
     width: 6% !important;
     min-width: 80px !important;
     max-width: 100px !important;
@@ -1150,6 +1222,19 @@
         </a>
 
         <a href="/admin/training_metadata/trackchanges/"> Track Changes </a>
+      </div>
+    </div>
+
+    <div class="pstim-nav-item">
+      <a href="/admin/virus_metadata/">
+        VIRUS METADATA
+        <span class="pstim-nav-caret" aria-hidden="true">▼</span>
+      </a>
+
+      <div class="pstim-dropdown">
+        <a href="/admin/virus_metadata/virus/"> Viruses </a>
+
+        <a href="/admin/virus_metadata/trackchanges/"> Track Changes </a>
       </div>
     </div>
 

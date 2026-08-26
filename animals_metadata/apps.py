@@ -26,6 +26,10 @@ class AnimalsMetadataConfig(AppConfig):
                     "Vision Check",
                     "Track Changes",
                 ],
+                "virus_metadata": [
+                    "Viruses",
+                    "Track Changes",
+                ],
                 "imaging_metadata": [
                     "Imaging Sessions",
                     "Track Changes",
@@ -58,7 +62,8 @@ class AnimalsMetadataConfig(AppConfig):
                 "imaging_metadata": 1,
                 "imaging_analysis_metadata": 2,
                 "training_metadata": 3,
-                "auth": 4,
+                "virus_metadata": 4,
+                "auth": 5,
             }
 
             app_list.sort(

@@ -79,10 +79,6 @@ class ViralInjection(models.Model):
         on_delete=models.CASCADE,
     )
 
-    class VirusChoices(models.TextChoices):
-        AAV322 = "AAV322", "AAV322"
-        AAV418 = "AAV418", "AAV418"
-
     class InjectionSiteChoices(models.TextChoices):
         V1 = "V1", "V1"
 
@@ -90,10 +86,12 @@ class ViralInjection(models.Model):
     # VIRUS 1
     # ---------------------------------------------------------
 
-    virus_id = models.CharField(
-        max_length=100,
-        choices=VirusChoices.choices,
+    virus_id = models.ForeignKey(
+        "virus_metadata.Virus",
+        to_field="virus_id",
+        on_delete=models.PROTECT,
         verbose_name="Virus ID 1",
+        related_name="viral_injections_1",
     )
 
     volume_ul = models.FloatField(
@@ -119,12 +117,14 @@ class ViralInjection(models.Model):
     # VIRUS 2
     # ---------------------------------------------------------
 
-    virus_id_2 = models.CharField(
-        max_length=100,
-        choices=VirusChoices.choices,
+    virus_id_2 = models.ForeignKey(
+        "virus_metadata.Virus",
+        to_field="virus_id",
+        on_delete=models.PROTECT,
         blank=True,
         null=True,
         verbose_name="Virus ID 2",
+        related_name="viral_injections_2",
     )
 
     volume_nl_2 = models.FloatField(
@@ -152,12 +152,14 @@ class ViralInjection(models.Model):
     # VIRUS 3
     # ---------------------------------------------------------
 
-    virus_id_3 = models.CharField(
-        max_length=100,
-        choices=VirusChoices.choices,
+    virus_id_3 = models.ForeignKey(
+        "virus_metadata.Virus",
+        to_field="virus_id",
+        on_delete=models.PROTECT,
         blank=True,
         null=True,
         verbose_name="Virus ID 3",
+        related_name="viral_injections_3",
     )
 
     volume_nl_3 = models.FloatField(
