@@ -207,6 +207,9 @@ class AnalysisRunAdmin(SimpleHistoryAdmin):
         )
 
 
+from animals_metadata.utils import get_user_initials
+
+
 @admin.register(TrackChanges)
 class TrackChangesAdmin(admin.ModelAdmin):
     list_display = (
@@ -214,7 +217,7 @@ class TrackChangesAdmin(admin.ModelAdmin):
         "animal_id",
         "action",
         "changed_at",
-        "changed_by",
+        "display_changed_by",
         "changes",
     )
 
@@ -242,6 +245,10 @@ class TrackChangesAdmin(admin.ModelAdmin):
         "changed_by",
         "changes",
     )
+
+    @admin.display(description="Changed by", ordering="changed_by")
+    def display_changed_by(self, obj):
+        return get_user_initials(obj.changed_by)
 
     def has_add_permission(self, request):
         return False
