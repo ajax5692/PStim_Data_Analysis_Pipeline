@@ -18,16 +18,32 @@ class AnimalsMetadataConfig(AppConfig):
                 app_label,
             )
 
-            # Order models inside Animals Metadata
-            for app in app_list:
-                if app["app_label"] == "animals_metadata":
-                    order = [
-                        "Animals",
-                        "Viral Injections",
-                        "Vision Check",
-                        "Track Changes",
-                    ]
+            # Order models inside apps
+            app_model_orders = {
+                "animals_metadata": [
+                    "Animals",
+                    "Viral Injections",
+                    "Vision Check",
+                    "Track Changes",
+                ],
+                "imaging_metadata": [
+                    "Imaging Sessions",
+                    "Track Changes",
+                ],
+                "imaging_analysis_metadata": [
+                    "Analysis Runs",
+                    "Track Changes",
+                ],
+                "training_metadata": [
+                    "Training Sessions",
+                    "Track Changes",
+                ],
+            }
 
+            for app in app_list:
+                app_label = app["app_label"]
+                if app_label in app_model_orders:
+                    order = app_model_orders[app_label]
                     app["models"].sort(
                         key=lambda x: (
                             order.index(x["name"])

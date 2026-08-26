@@ -1,11 +1,12 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from simple_history.admin import SimpleHistoryAdmin
 
-from .models import ImagingSession
+from .models import ImagingSession, TrackChanges
 
 
 @admin.register(ImagingSession)
-class ImagingSessionAdmin(admin.ModelAdmin):
+class ImagingSessionAdmin(SimpleHistoryAdmin):
     list_display = (
         "animal",
         "acquisition_date",
@@ -79,3 +80,49 @@ class ImagingSessionAdmin(admin.ModelAdmin):
             mesc_path,
             mesc_path,
         )
+
+
+@admin.register(TrackChanges)
+class TrackChangesAdmin(admin.ModelAdmin):
+    list_display = (
+        "category",
+        "animal_id",
+        "action",
+        "changed_at",
+        "changed_by",
+        "changes",
+    )
+
+    list_filter = (
+        "category",
+        "action",
+        "changed_at",
+    )
+
+    search_fields = (
+        "animal_id",
+        "changed_by",
+        "changes",
+    )
+
+    ordering = (
+        "-changed_at",
+    )
+
+    readonly_fields = (
+        "category",
+        "animal_id",
+        "action",
+        "changed_at",
+        "changed_by",
+        "changes",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
