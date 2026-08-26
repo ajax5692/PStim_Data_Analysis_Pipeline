@@ -245,9 +245,9 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
 
     search_fields = (
         "animal_id__animal_id",
-        "virus_id",
-        "virus_id_2",
-        "virus_id_3",
+        "virus_id__virus_id",
+        "virus_id_2__virus_id",
+        "virus_id_3__virus_id",
         "injecting_person",
         "site",
         "site_2",
@@ -347,7 +347,7 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
         if obj.virus_id:
             injections.append(
                 (
-                    obj.virus_id,
+                    obj.virus_id.virus_id if hasattr(obj.virus_id, "virus_id") else obj.virus_id,
                     obj.volume_ul,
                     obj.site,
                     obj.depth,
@@ -358,7 +358,7 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
         if obj.virus_id_2:
             injections.append(
                 (
-                    obj.virus_id_2,
+                    obj.virus_id_2.virus_id if hasattr(obj.virus_id_2, "virus_id") else obj.virus_id_2,
                     obj.volume_nl_2,
                     obj.site_2,
                     obj.depth_2,
@@ -369,7 +369,7 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
         if obj.virus_id_3:
             injections.append(
                 (
-                    obj.virus_id_3,
+                    obj.virus_id_3.virus_id if hasattr(obj.virus_id_3, "virus_id") else obj.virus_id_3,
                     obj.volume_nl_3,
                     obj.site_3,
                     obj.depth_3,
@@ -404,11 +404,18 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
     def display_expression_mescfile_path(self, obj):
         expression = obj.expression or "Not available"
 
+        if obj.expression:
+            clean_path = obj.expression.strip().replace("\\", "/")
+            short_path = clean_path.split("/")[-1] if "/" in clean_path else obj.expression
+        else:
+            short_path = "Not available"
+
         return format_html(
             '<div style="display: grid; '
             'grid-template-columns: max-content 1fr; '
             'column-gap: 6px; '
-            'align-items: start;">'
+            'align-items: center;" '
+            'title="{}">'
 
                 '<button type="button" '
                 'class="pstim-copy-button" '
@@ -443,13 +450,14 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
 
                 '</button>'
 
-                '<span style="overflow-wrap: anywhere;">'
+                '<span style="overflow-wrap: anywhere; word-break: break-all;">'
                 '{}'
                 '</span>'
 
             '</div>',
             expression,
             expression,
+            short_path,
         )
 
 
