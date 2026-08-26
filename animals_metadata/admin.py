@@ -404,18 +404,11 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
     def display_expression_mescfile_path(self, obj):
         expression = obj.expression or "Not available"
 
-        if obj.expression:
-            clean_path = obj.expression.strip().replace("\\", "/")
-            short_path = clean_path.split("/")[-1] if "/" in clean_path else obj.expression
-        else:
-            short_path = "Not available"
-
         return format_html(
             '<div style="display: grid; '
             'grid-template-columns: max-content 1fr; '
             'column-gap: 6px; '
-            'align-items: center;" '
-            'title="{}">'
+            'align-items: start;">'
 
                 '<button type="button" '
                 'class="pstim-copy-button" '
@@ -450,14 +443,13 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
 
                 '</button>'
 
-                '<span style="overflow-wrap: anywhere; word-break: break-all;">'
+                '<span style="overflow-wrap: anywhere;">'
                 '{}'
                 '</span>'
 
             '</div>',
             expression,
             expression,
-            short_path,
         )
 
 
