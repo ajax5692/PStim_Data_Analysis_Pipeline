@@ -2,7 +2,7 @@ from django.dispatch import receiver
 from simple_history.signals import post_create_historical_record
 
 from animals_metadata.utils import get_user_initials
-from .models import TrackChanges, TrainingSession
+from .models import MouseBodyWeightRecord, TrackChanges, TrainingSession
 
 
 @receiver(post_create_historical_record)
@@ -10,10 +10,12 @@ def create_track_change(sender, instance, history_instance, **kwargs):
 
     model = instance.__class__
 
-    if model is not TrainingSession:
+    if model is TrainingSession:
+        category = TrackChanges.CategoryChoices.TRAINING_SESSION
+    elif model is MouseBodyWeightRecord:
+        category = TrackChanges.CategoryChoices.MOUSE_BODY_WEIGHT
+    else:
         return
-
-    category = TrackChanges.CategoryChoices.TRAINING_SESSION
 
     try:
         animal_id = instance.animal.animal_id

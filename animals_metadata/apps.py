@@ -40,6 +40,7 @@ class AnimalsMetadataConfig(AppConfig):
                 ],
                 "training_metadata": [
                     "Training Sessions",
+                    "Mice Body Weight Records",
                     "Track Changes",
                 ],
             }

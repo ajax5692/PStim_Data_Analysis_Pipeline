@@ -985,12 +985,85 @@
   }
 
   /* =========================================================
+     MICE BODY WEIGHT RECORDS TABLE
+     ========================================================= */
+
+  body.app-training_metadata.model-mousebodyweightrecord.change-list
+    #result_list
+    th.column-get_mouse_id,
+  body.app-training_metadata.model-mousebodyweightrecord.change-list
+    #result_list
+    td.field-get_mouse_id {
+    width: 80px !important;
+    min-width: 80px !important;
+    max-width: 100px !important;
+  }
+
+  body.app-training_metadata.model-mousebodyweightrecord.change-list
+    #result_list
+    th.column-get_owner,
+  body.app-training_metadata.model-mousebodyweightrecord.change-list
+    #result_list
+    td.field-get_owner {
+    width: 70px !important;
+    min-width: 60px !important;
+    max-width: 80px !important;
+  }
+
+  body.app-training_metadata.model-mousebodyweightrecord.change-list
+    #result_list
+    th.column-date,
+  body.app-training_metadata.model-mousebodyweightrecord.change-list
+    #result_list
+    td.field-date {
+    width: 110px !important;
+    min-width: 100px !important;
+    max-width: 120px !important;
+  }
+
+  body.app-training_metadata.model-mousebodyweightrecord.change-list
+    #result_list
+    th.column-body_weight_g,
+  body.app-training_metadata.model-mousebodyweightrecord.change-list
+    #result_list
+    td.field-body_weight_g {
+    width: 150px !important;
+    min-width: 130px !important;
+    max-width: 170px !important;
+  }
+
+  body.app-training_metadata.model-mousebodyweightrecord.change-list
+    #result_list
+    th.column-display_percent_body_weight,
+  body.app-training_metadata.model-mousebodyweightrecord.change-list
+    #result_list
+    td.field-display_percent_body_weight {
+    width: 220px !important;
+    min-width: 180px !important;
+    max-width: 250px !important;
+    font-weight: 600 !important;
+  }
+
+  body.app-training_metadata.model-mousebodyweightrecord.change-list
+    #result_list
+    th.column-notes,
+  body.app-training_metadata.model-mousebodyweightrecord.change-list
+    #result_list
+    td.field-notes {
+    width: 45% !important;
+    min-width: 250px !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    line-height: 1.4 !important;
+  }
+
+  /* =========================================================
      TRACK CHANGES TABLE (ALL APPS)
      ========================================================= */
 
   body.model-trackchanges.change-list #result_list th.column-category,
   body.model-trackchanges.change-list #result_list td.field-category {
-    width: 10% !important;
+    width: 15% !important;
     min-width: 110px !important;
     max-width: 150px !important;
   }
@@ -1219,6 +1292,10 @@
       <div class="pstim-dropdown">
         <a href="/admin/training_metadata/trainingsession/">
           Training Sessions
+        </a>
+
+        <a href="/admin/training_metadata/mousebodyweightrecord/">
+          Mice Body Weight Records
         </a>
 
         <a href="/admin/training_metadata/trackchanges/"> Track Changes </a>
