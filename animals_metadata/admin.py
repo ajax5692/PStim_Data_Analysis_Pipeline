@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib import admin
-from django.utils.html import format_html_join
+from django.utils.html import format_html, format_html_join
 from simple_history.admin import SimpleHistoryAdmin
 
 from animals_metadata.models import (
@@ -53,7 +53,7 @@ class VisionCheckAdmin(SimpleHistoryAdmin):
         "get_animal_id",
         "vision_test_type",
         "vision_test_result",
-        "data_path",
+        "display_data_path",
     )
 
     list_filter = (
@@ -71,6 +71,58 @@ class VisionCheckAdmin(SimpleHistoryAdmin):
     @admin.display(description="Animal ID")
     def get_animal_id(self, obj):
         return obj.animal_id
+    
+    @admin.display(description="Data Path", ordering="data_path")
+    def display_data_path(self, obj):
+        data_path = obj.data_path or "Not available"
+
+        return format_html(
+            '<div style="display: grid; '
+            'grid-template-columns: max-content 1fr; '
+            'column-gap: 6px; '
+            'align-items: start;">'
+
+                '<button type="button" '
+                'class="pstim-copy-button" '
+                'data-copy-text="{}" '
+                'title="Copy MESC file path" '
+                'aria-label="Copy MESC file path">'
+
+                    '<svg '
+                    'width="16" '
+                    'height="16" '
+                    'viewBox="0 0 24 24" '
+                    'fill="none" '
+                    'stroke="currentColor" '
+                    'stroke-width="2" '
+                    'stroke-linecap="round" '
+                    'stroke-linejoin="round" '
+                    'aria-hidden="true">'
+
+                        '<rect '
+                        'x="8" '
+                        'y="8" '
+                        'width="12" '
+                        'height="12" '
+                        'rx="2">'
+                        '</rect>'
+
+                        '<path '
+                        'd="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2">'
+                        '</path>'
+
+                    '</svg>'
+
+                '</button>'
+
+                '<span style="overflow-wrap: anywhere;">'
+                '{}'
+                '</span>'
+
+            '</div>',
+            data_path,
+            data_path,
+        )
 
 
 class ViralInjectionAdminForm(forms.ModelForm):
@@ -176,7 +228,7 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
         "injection_date",
         "surgery_date",
         "get_surgery_person",
-        "expression",
+        "display_expression_mescfile_path",
         "notes",
     )
 
@@ -347,6 +399,58 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
     @admin.display(description="Sur. Person")
     def get_surgery_person(self, obj):
         return obj.surgery_person
+    
+    @admin.display(description="Expression (Checkup MESC File)", ordering="expression")
+    def display_expression_mescfile_path(self, obj):
+        expression = obj.expression or "Not available"
+
+        return format_html(
+            '<div style="display: grid; '
+            'grid-template-columns: max-content 1fr; '
+            'column-gap: 6px; '
+            'align-items: start;">'
+
+                '<button type="button" '
+                'class="pstim-copy-button" '
+                'data-copy-text="{}" '
+                'title="Copy MESC file path" '
+                'aria-label="Copy MESC file path">'
+
+                    '<svg '
+                    'width="16" '
+                    'height="16" '
+                    'viewBox="0 0 24 24" '
+                    'fill="none" '
+                    'stroke="currentColor" '
+                    'stroke-width="2" '
+                    'stroke-linecap="round" '
+                    'stroke-linejoin="round" '
+                    'aria-hidden="true">'
+
+                        '<rect '
+                        'x="8" '
+                        'y="8" '
+                        'width="12" '
+                        'height="12" '
+                        'rx="2">'
+                        '</rect>'
+
+                        '<path '
+                        'd="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2">'
+                        '</path>'
+
+                    '</svg>'
+
+                '</button>'
+
+                '<span style="overflow-wrap: anywhere;">'
+                '{}'
+                '</span>'
+
+            '</div>',
+            expression,
+            expression,
+        )
 
 
 @admin.register(TrackChanges)
