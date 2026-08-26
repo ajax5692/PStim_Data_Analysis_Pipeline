@@ -80,22 +80,22 @@ class AnalysisRunAdmin(admin.ModelAdmin):
         if not log_path and output_path:
             output_dir = Path(output_path)
 
-            # First check the old log filename.
             old_log = output_dir / "pipeline_log.txt"
 
             if old_log.exists():
                 log_path = str(old_log)
 
             else:
-                # Otherwise look for the new timestamped run logs.
-                run_logs = list(output_dir.glob("*_runlog.txt"))
+                run_logs = list(
+                    output_dir.glob("*_runlog.txt")
+                )
 
                 if run_logs:
-                    # Use the most recently modified run log.
                     newest_log = max(
                         run_logs,
                         key=lambda path: path.stat().st_mtime,
                     )
+
                     log_path = str(newest_log)
 
         log_text = log_path or "Not available"
@@ -105,24 +105,102 @@ class AnalysisRunAdmin(admin.ModelAdmin):
             '<div style="white-space: normal; min-width: 450px;">'
 
                 '<div style="display: grid; '
-                'grid-template-columns: max-content 1fr; '
-                'column-gap: 5px; '
+                'grid-template-columns: max-content max-content 1fr; '
+                'column-gap: 6px; '
                 'align-items: start;">'
+
+                    '<button type="button" '
+                'class="pstim-copy-button" '
+                'data-copy-text="{}" '
+                'title="Copy MESC file path" '
+                'aria-label="Copy MESC file path">'
+
+                    '<svg '
+                    'width="16" '
+                    'height="16" '
+                    'viewBox="0 0 24 24" '
+                    'fill="none" '
+                    'stroke="currentColor" '
+                    'stroke-width="2" '
+                    'stroke-linecap="round" '
+                    'stroke-linejoin="round" '
+                    'aria-hidden="true">'
+
+                        '<rect '
+                        'x="8" '
+                        'y="8" '
+                        'width="12" '
+                        'height="12" '
+                        'rx="2">'
+                        '</rect>'
+
+                        '<path '
+                        'd="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2">'
+                        '</path>'
+
+                    '</svg>'
+
+                '</button>'
+
                     '<strong>• Log:</strong>'
-                    '<span style="overflow-wrap: anywhere;">{}</span>'
+
+                    '<span style="overflow-wrap: anywhere;">'
+                    '{}'
+                    '</span>'
+
                 '</div>'
 
                 '<div style="height: 8px;"></div>'
 
                 '<div style="display: grid; '
-                'grid-template-columns: max-content 1fr; '
-                'column-gap: 5px; '
+                'grid-template-columns: max-content max-content 1fr; '
+                'column-gap: 6px; '
                 'align-items: start;">'
+
+                    '<button type="button" '
+                'class="pstim-copy-button" '
+                'data-copy-text="{}" '
+                'title="Copy MESC file path" '
+                'aria-label="Copy MESC file path">'
+
+                    '<svg '
+                    'width="16" '
+                    'height="16" '
+                    'viewBox="0 0 24 24" '
+                    'fill="none" '
+                    'stroke="currentColor" '
+                    'stroke-width="2" '
+                    'stroke-linecap="round" '
+                    'stroke-linejoin="round" '
+                    'aria-hidden="true">'
+
+                        '<rect '
+                        'x="8" '
+                        'y="8" '
+                        'width="12" '
+                        'height="12" '
+                        'rx="2">'
+                        '</rect>'
+
+                        '<path '
+                        'd="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2">'
+                        '</path>'
+
+                    '</svg>'
+
+                '</button>'
+
                     '<strong>• Suite2P:</strong>'
-                    '<span style="overflow-wrap: anywhere;">{}</span>'
+
+                    '<span style="overflow-wrap: anywhere;">'
+                    '{}'
+                    '</span>'
+
                 '</div>'
 
             '</div>',
             log_text,
+            log_text,
+            output_text,
             output_text,
         )

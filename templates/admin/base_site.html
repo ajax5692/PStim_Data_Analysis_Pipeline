@@ -671,13 +671,13 @@
 
   body.app-animals_metadata.model-viralinjection.change-list
     #result_list
-    th.column-expression,
+    th.column-display_expression_mescfile_path,
   body.app-animals_metadata.model-viralinjection.change-list
     #result_list
-    td.field-expression {
+    td.field-display_expression_mescfile_path {
     width: 600px !important;
-    min-width: 600px !important;
-    max-width: 600px !important;
+    /* min-width: 800px !important; */
+    /* max-width: 600px !important; */
   }
 
   /* =========================================================
@@ -731,10 +731,10 @@
 
   body.app-animals_metadata.model-visioncheck.change-list
     #result_list
-    th.column-data_path,
+    th.column-display_data_path,
   body.app-animals_metadata.model-visioncheck.change-list
     #result_list
-    td.field-data_path {
+    td.field-display_data_path {
     width: 900px !important;
     min-width: 900px !important;
     max-width: 900px !important;
@@ -810,10 +810,10 @@
 
   body.app-imaging_metadata.model-imagingsession.change-list
     #result_list
-    th.column-mesc_file_path,
+    th.column-display_mesc_file_path,
   body.app-imaging_metadata.model-imagingsession.change-list
     #result_list
-    td.field-mesc_file_path {
+    td.field-display_mesc_file_path {
     width: 60% !important;
     min-width: 300px !important;
 
@@ -828,7 +828,7 @@
 
   body.app-imaging_metadata.model-imagingsession.change-list
     #result_list
-    td.field-mesc_file_path {
+    td.field-display_mesc_file_path {
     text-align: left !important;
     padding-left: 10px !important;
   }
@@ -870,6 +870,81 @@
 
     display: block !important;
   }
+
+  /* =========================================================
+     COPY PATH BUTTON
+     ========================================================= */
+
+  .pstim-copy-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 20px !important;
+    height: 20px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    border: 0 !important;
+    background: transparent !important;
+
+    color: var(--body-fg) !important;
+    cursor: pointer !important;
+  }
+
+  .pstim-copy-button svg {
+    width: 16px !important;
+    height: 16px !important;
+    display: block !important;
+  }
+
+  .pstim-copy-button:hover {
+    color: var(--link-fg) !important;
+  }
+
+  .pstim-copy-button:focus-visible {
+    outline: 2px solid var(--link-fg) !important;
+    outline-offset: 2px !important;
+    border-radius: 3px !important;
+  }
+
+  /* =========================================================
+   COPY PATH TOAST
+   ========================================================= */
+
+  #pstim-copy-toast {
+    position: fixed;
+
+    top: 50%;
+    left: 50%;
+
+    padding: 10px 14px;
+
+    background: var(--body-fg);
+    color: var(--body-bg);
+
+    border-radius: 6px;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    opacity: 0;
+    pointer-events: none;
+
+    transform: translate(-50%, -50%) translateY(8px);
+
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+
+    z-index: 9999;
+  }
+
+  #pstim-copy-toast.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0);
+  }
 </style>
 
 {% endblock %} {% block nav-global %}
@@ -892,6 +967,47 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
+    /* =======================================================
+       COPY PATH BUTTONS
+       ======================================================= */
+
+    const copyToast = document.createElement("div");
+    copyToast.id = "pstim-copy-toast";
+    copyToast.textContent = "Path copied!";
+    copyToast.setAttribute("role", "status");
+    copyToast.setAttribute("aria-live", "polite");
+    document.body.appendChild(copyToast);
+
+    let copyToastTimer = null;
+
+    document.addEventListener("click", async function (event) {
+      const button = event.target.closest(".pstim-copy-button");
+
+      if (!button) {
+        return;
+      }
+
+      const pathToCopy = button.dataset.copyText;
+
+      if (!pathToCopy || pathToCopy === "Not available") {
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(pathToCopy);
+
+        copyToast.classList.add("show");
+
+        clearTimeout(copyToastTimer);
+
+        copyToastTimer = setTimeout(function () {
+          copyToast.classList.remove("show");
+        }, 1500);
+      } catch (error) {
+        console.error("Could not copy path:", error);
+      }
+    });
+
     /* =======================================================
        DETECT DJANGO APP INDEX PAGES
        ======================================================= */
