@@ -1,6 +1,7 @@
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
+from simple_history.models import HistoricalRecords
 
 from .utils import parse_unit_ranges
 
@@ -127,6 +128,8 @@ class AnalysisRun(models.Model):
             ]
         )
 
+    history = HistoricalRecords()
+
     class Meta:
         verbose_name = "Analysis Run"
         verbose_name_plural = "Analysis Runs"
@@ -138,3 +141,51 @@ class AnalysisRun(models.Model):
             f"{self.imaging_session.acquisition_date} - "
             f"Run {self.pk or 'New'}"
         )
+
+
+class TrackChanges(models.Model):
+
+    class CategoryChoices(models.TextChoices):
+        ANALYSIS_RUN = "analysis_run", "Analysis Run"
+
+    class ActionChoices(models.TextChoices):
+        CREATED = "+", "Created"
+        UPDATED = "~", "Updated"
+        DELETED = "-", "Deleted"
+
+    category = models.CharField(
+        max_length=30,
+        choices=CategoryChoices.choices,
+    )
+
+    animal_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+    )
+
+    action = models.CharField(
+        max_length=1,
+        choices=ActionChoices.choices,
+    )
+
+    changed_at = models.DateTimeField()
+
+    changed_by = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+    )
+
+    changes = models.TextField(
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        verbose_name = "Track Change"
+        verbose_name_plural = "Track Changes"
+        ordering = ["-changed_at"]
+
+    def __str__(self):
+        return f"{self.get_category_display()} - {self.animal_id}"
