@@ -4,7 +4,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from animals_metadata.models import Animal
-from .models import MouseBodyWeightRecord, TrackChanges, TrainingSession
+from .models import BodyWeightEntry, MouseBodyWeight, TrackChanges, TrainingSession
 
 
 class TrainingSessionTrackChangesTest(TestCase):
@@ -48,14 +48,8 @@ class TrainingSessionTrackChangesTest(TestCase):
     def test_mouse_body_weight_lifecycle_and_auto_calculation(self):
         base_date = timezone.now().date()
 
-        # Day 1: Start weight = 25.0g (100.0%)
-        rec1 = MouseBodyWeightRecord.objects.create(
-            animal=self.animal,
-            date=base_date,
-            body_weight_g=25.0,
-            notes="Baseline weight",
-        )
-        self.assertEqual(rec1.percent_body_weight, 100.0)
+        # Create Tracker
+        tracker = MouseBodyWeight.objects.create(animal=self.animal)
         self.assertEqual(
             TrackChanges.objects.filter(
                 animal_id="TRN01",
@@ -64,27 +58,36 @@ class TrainingSessionTrackChangesTest(TestCase):
             1,
         )
 
+        # Day 1: Start weight = 25.0g (100.0%)
+        entry1 = BodyWeightEntry.objects.create(
+            tracker=tracker,
+            date=base_date,
+            body_weight_g=25.0,
+            notes="Baseline weight",
+        )
+        self.assertEqual(entry1.percent_body_weight, 100.0)
+
         # Day 2: Entered weight = 24.0g (96.0%)
-        rec2 = MouseBodyWeightRecord.objects.create(
-            animal=self.animal,
+        entry2 = BodyWeightEntry.objects.create(
+            tracker=tracker,
             date=base_date + timedelta(days=1),
             body_weight_g=24.0,
             notes="Day 2 training",
         )
-        self.assertEqual(rec2.percent_body_weight, 96.0)
+        self.assertEqual(entry2.percent_body_weight, 96.0)
 
         # Day 3: Entered weight = 22.5g (90.0%)
-        rec3 = MouseBodyWeightRecord.objects.create(
-            animal=self.animal,
+        entry3 = BodyWeightEntry.objects.create(
+            tracker=tracker,
             date=base_date + timedelta(days=2),
             body_weight_g=22.5,
             notes="Day 3 training",
         )
-        self.assertEqual(rec3.percent_body_weight, 90.0)
+        self.assertEqual(entry3.percent_body_weight, 90.0)
 
-        # Update rec2 notes and weight
-        rec2.notes = "Day 2 notes updated"
-        rec2.save()
+        # Update entry2 notes and weight
+        entry2.notes = "Day 2 notes updated"
+        entry2.save()
         self.assertIn(
             "notes",
             TrackChanges.objects.filter(
@@ -93,13 +96,14 @@ class TrainingSessionTrackChangesTest(TestCase):
             ).first().changes,
         )
 
-        # Delete rec3
-        rec3.delete()
+        # Delete entry3
+        entry3.delete()
         delete_track = TrackChanges.objects.filter(
             animal_id="TRN01",
             category=TrackChanges.CategoryChoices.MOUSE_BODY_WEIGHT,
             action="-",
         ).first()
         self.assertIsNotNone(delete_track)
+
 
 

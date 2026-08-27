@@ -37,12 +37,48 @@ class TrainingSession(models.Model):
         return f"{self.animal.animal_id} - {self.training_date}"
 
 
-class MouseBodyWeightRecord(models.Model):
-    animal = models.ForeignKey(
+class MouseBodyWeight(models.Model):
+    animal = models.OneToOneField(
         "animals_metadata.Animal",
-        on_delete=models.PROTECT,
-        related_name="body_weight_records",
-        verbose_name="Mouse ID",
+        on_delete=models.CASCADE,
+        related_name="body_weight_tracker",
+        verbose_name="Animal ID",
+    )
+
+    history = HistoricalRecords()
+
+    class Meta:
+        verbose_name = "Mouse Body Weight Record"
+        verbose_name_plural = "Mice Body Weight Records"
+        ordering = ["animal__animal_id"]
+
+    def __str__(self):
+        return f"{self.animal.animal_id}"
+
+    def recalculate_percentages(self):
+        entries = list(self.entries.all().order_by("date", "id"))
+        if not entries:
+            return
+        start_wt = entries[0].body_weight_g
+        to_update = []
+        for entry in entries:
+            if start_wt and start_wt > 0 and entry.body_weight_g is not None:
+                new_pct = round((entry.body_weight_g / start_wt) * 100.0, 2)
+            else:
+                new_pct = 100.0
+            if entry.percent_body_weight != new_pct:
+                entry.percent_body_weight = new_pct
+                to_update.append(entry)
+        if to_update:
+            BodyWeightEntry.objects.bulk_update(to_update, ["percent_body_weight"])
+
+
+class BodyWeightEntry(models.Model):
+    tracker = models.ForeignKey(
+        MouseBodyWeight,
+        on_delete=models.CASCADE,
+        related_name="entries",
+        verbose_name="Mouse Body Weight",
     )
 
     date = models.DateField(
@@ -68,26 +104,26 @@ class MouseBodyWeightRecord(models.Model):
     history = HistoricalRecords()
 
     class Meta:
-        verbose_name = "Mouse Body Weight Record"
-        verbose_name_plural = "Mice Body Weight Records"
-        ordering = ["-date", "animal"]
+        verbose_name = "Body Weight Entry"
+        verbose_name_plural = "Body Weight Entries"
+        ordering = ["date"]
 
     def __str__(self):
-        return f"{self.animal.animal_id} - {self.date} ({self.body_weight_g}g)"
+        return ""
 
     def calculate_percent_body_weight(self):
-        if not self.animal_id or self.body_weight_g is None:
+        if not self.tracker_id or self.body_weight_g is None:
             return None
-        first_record = (
-            MouseBodyWeightRecord.objects.filter(animal=self.animal)
+        first_entry = (
+            BodyWeightEntry.objects.filter(tracker=self.tracker)
             .order_by("date", "id")
             .first()
         )
-        if first_record and first_record.pk != self.pk:
-            if self.date < first_record.date:
+        if first_entry and first_entry.pk != self.pk:
+            if self.date < first_entry.date:
                 start_wt = self.body_weight_g
             else:
-                start_wt = first_record.body_weight_g
+                start_wt = first_entry.body_weight_g
         else:
             start_wt = self.body_weight_g
 
@@ -95,35 +131,17 @@ class MouseBodyWeightRecord(models.Model):
             return round((self.body_weight_g / start_wt) * 100.0, 2)
         return 100.0
 
-    @classmethod
-    def recalculate_for_animal(cls, animal):
-        if not animal:
-            return
-        records = list(cls.objects.filter(animal=animal).order_by("date", "id"))
-        if not records:
-            return
-        start_wt = records[0].body_weight_g
-        to_update = []
-        for rec in records:
-            if start_wt and start_wt > 0 and rec.body_weight_g is not None:
-                new_pct = round((rec.body_weight_g / start_wt) * 100.0, 2)
-            else:
-                new_pct = 100.0
-            if rec.percent_body_weight != new_pct:
-                rec.percent_body_weight = new_pct
-                to_update.append(rec)
-        if to_update:
-            cls.objects.bulk_update(to_update, ["percent_body_weight"])
-
     def save(self, *args, **kwargs):
         self.percent_body_weight = self.calculate_percent_body_weight()
         super().save(*args, **kwargs)
-        MouseBodyWeightRecord.recalculate_for_animal(self.animal)
+        if self.tracker_id:
+            self.tracker.recalculate_percentages()
 
     def delete(self, *args, **kwargs):
-        animal = self.animal
+        tracker = self.tracker
         super().delete(*args, **kwargs)
-        MouseBodyWeightRecord.recalculate_for_animal(animal)
+        if tracker:
+            tracker.recalculate_percentages()
 
 
 class TrackChanges(models.Model):
@@ -172,4 +190,4 @@ class TrackChanges(models.Model):
         ordering = ["-changed_at"]
 
     def __str__(self):
-        return f"{self.get_category_display()} - {self.animal_id}"
+        return f"{self.get_category_display()} - {self.animal_id}"
