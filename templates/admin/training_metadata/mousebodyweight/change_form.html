@@ -1,0 +1,368 @@
+<!-- prettier-ignore-start -->\ {% extends "admin/change_form.html" %} {% load
+i18n admin_urls static %} {%block field_sets %}
+<!-- prettier-ignore-end -->
+<div class="mbw-layout-row">
+  <div class="mbw-fields-column">{{ block.super }}</div>
+
+  <div class="mbw-chart-column">
+    <div class="mbw-chart-card">
+      <div class="mbw-chart-header">
+        <div class="mbw-chart-title">Body Weight Progression</div>
+        <div class="mbw-chart-badges" id="mbw-chart-badges"></div>
+      </div>
+      <div class="mbw-canvas-container" id="mbw-canvas-container">
+        <canvas id="mbw-weight-canvas"></canvas>
+        <div id="mbw-chart-empty" class="mbw-chart-empty" style="display: none">
+          <span>No body weight records recorded yet.</span>
+        </div>
+        <div id="mbw-chart-tooltip" class="mbw-chart-tooltip"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const canvas = document.getElementById("mbw-weight-canvas");
+    const container = document.getElementById("mbw-canvas-container");
+    const emptyMsg = document.getElementById("mbw-chart-empty");
+    const tooltip = document.getElementById("mbw-chart-tooltip");
+    const badgesContainer = document.getElementById("mbw-chart-badges");
+
+    if (!canvas || !container) return;
+
+    const ctx = canvas.getContext("2d");
+    let chartPoints = [];
+    let hoveredPoint = null;
+
+    function extractDataFromTable() {
+      const rows = document.querySelectorAll(
+        "#entries-group table tbody tr.form-row, #entries-group table tbody tr.dynamic-entries",
+      );
+      const data = [];
+
+      rows.forEach((row) => {
+        const deleteCheckbox = row.querySelector(
+          'input[type="checkbox"][name$="-DELETE"]',
+        );
+        if (deleteCheckbox && deleteCheckbox.checked) return;
+
+        const dateInput = row.querySelector(
+          'input[type="text"][name$="-date"], input[name$="-date"]',
+        );
+        const weightInput = row.querySelector(
+          'input[type="number"][name$="-body_weight_g"], input[type="text"][name$="-body_weight_g"], input[name$="-body_weight_g"]',
+        );
+
+        if (dateInput && weightInput) {
+          const dateStr = dateInput.value ? dateInput.value.trim() : "";
+          const weightVal = parseFloat(weightInput.value);
+
+          if (dateStr && !isNaN(weightVal) && weightVal > 0) {
+            data.push({
+              date: dateStr,
+              weight: weightVal,
+              dateObj: new Date(dateStr),
+            });
+          }
+        }
+      });
+
+      data.sort((a, b) => {
+        const tA = isNaN(a.dateObj.getTime()) ? a.date : a.dateObj.getTime();
+        const tB = isNaN(b.dateObj.getTime()) ? b.date : b.dateObj.getTime();
+        return tA > tB ? 1 : tA < tB ? -1 : 0;
+      });
+
+      return data;
+    }
+
+    function updateBadges(data, startWeight, limit80) {
+      if (!badgesContainer) return;
+      badgesContainer.innerHTML = "";
+
+      if (data.length === 0) return;
+
+      const latestEntry = data[data.length - 1];
+      const latestPct =
+        startWeight > 0 ? (latestEntry.weight / startWeight) * 100 : 100;
+      const isBelowLimit = latestEntry.weight < limit80;
+
+      badgesContainer.innerHTML = `
+        <span class="mbw-badge start" title="Baseline start weight">
+          Start: <strong>${startWeight.toFixed(1)}g</strong> (100%)
+        </span>
+        <span class="mbw-badge latest ${isBelowLimit ? "warning" : ""}" title="Most recent recorded weight">
+          Latest: <strong>${latestEntry.weight.toFixed(1)}g</strong> (${latestPct.toFixed(1)}%)
+        </span>
+        <span class="mbw-badge limit" title="80% threshold line (safety cutoff)">
+          80% Limit: <strong>${limit80.toFixed(1)}g</strong>
+        </span>
+      `;
+    }
+
+    function renderChart() {
+      const data = extractDataFromTable();
+      chartPoints = [];
+
+      const rect = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const width = rect.width;
+      const height = rect.height || 200;
+
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + "px";
+      canvas.style.height = height + "px";
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+
+      if (data.length === 0) {
+        ctx.clearRect(0, 0, width, height);
+        emptyMsg.style.display = "flex";
+        if (badgesContainer) badgesContainer.innerHTML = "";
+        ctx.restore();
+        return;
+      }
+
+      emptyMsg.style.display = "none";
+
+      const startWeight = data[0].weight;
+      const limit80 = startWeight * 0.8;
+
+      updateBadges(data, startWeight, limit80);
+
+      const margin = {
+        top: 25,
+        right: 100,
+        bottom: 38,
+        left: 70,
+      };
+
+      const plotW = width - margin.left - margin.right;
+      const plotH = height - margin.top - margin.bottom;
+
+      let minW = Math.min(...data.map((d) => d.weight), limit80);
+      let maxW = Math.max(...data.map((d) => d.weight), startWeight);
+
+      const span = maxW - minW || 5;
+      minW = Math.floor(Math.max(0, minW - span * 0.15));
+      maxW = Math.ceil(maxW + span * 0.15);
+
+      function getY(val) {
+        return margin.top + plotH - ((val - minW) / (maxW - minW)) * plotH;
+      }
+
+      function getX(idx) {
+        if (data.length === 1) return margin.left + plotW / 2;
+        return margin.left + (idx / (data.length - 1)) * plotW;
+      }
+
+      ctx.clearRect(0, 0, width, height);
+
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      ctx.fillStyle = "rgba(200, 210, 220, 0.65)";
+      ctx.font = "10.5px Inter, system-ui, sans-serif";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+
+      const tickSteps = 4;
+      for (let i = 0; i <= tickSteps; i++) {
+        const val = minW + ((maxW - minW) / tickSteps) * i;
+        const y = getY(val);
+
+        ctx.beginPath();
+        ctx.moveTo(margin.left, y);
+        ctx.lineTo(margin.left + plotW, y);
+        ctx.stroke();
+
+        ctx.fillText(`${val.toFixed(1)}g`, margin.left - 8, y);
+      }
+
+      ctx.save();
+      ctx.translate(14, margin.top + plotH / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(200, 210, 220, 0.5)";
+      ctx.font = "10px Inter, system-ui, sans-serif";
+      ctx.fillText("Body Weight (g)", 0, 0);
+      ctx.restore();
+
+      const y80 = getY(limit80);
+      if (y80 >= margin.top - 5 && y80 <= margin.top + plotH + 5) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.setLineDash([5, 4]);
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 2;
+        ctx.moveTo(margin.left, y80);
+        ctx.lineTo(margin.left + plotW, y80);
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#ef4444";
+        ctx.font = "bold 10px Inter, system-ui, sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(
+          `80% (${limit80.toFixed(1)}g)`,
+          margin.left + plotW + 6,
+          y80,
+        );
+        ctx.restore();
+      }
+
+      if (data.length > 0) {
+        ctx.save();
+        const gradient = ctx.createLinearGradient(
+          0,
+          margin.top,
+          0,
+          margin.top + plotH,
+        );
+        gradient.addColorStop(0, "rgba(59, 130, 246, 0.28)");
+        gradient.addColorStop(1, "rgba(59, 130, 246, 0.0)");
+
+        ctx.beginPath();
+        data.forEach((d, idx) => {
+          const x = getX(idx);
+          const y = getY(d.weight);
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.lineTo(getX(data.length - 1), margin.top + plotH);
+        ctx.lineTo(getX(0), margin.top + plotH);
+        ctx.closePath();
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        ctx.restore();
+
+        ctx.save();
+        ctx.beginPath();
+        data.forEach((d, idx) => {
+          const x = getX(idx);
+          const y = getY(d.weight);
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 2.5;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.stroke();
+        ctx.restore();
+
+        data.forEach((d, idx) => {
+          const x = getX(idx);
+          const y = getY(d.weight);
+          const pct = startWeight > 0 ? (d.weight / startWeight) * 100 : 100;
+          const isWarning = d.weight < limit80;
+
+          chartPoints.push({
+            x,
+            y,
+            date: d.date,
+            weight: d.weight,
+            pct: pct,
+            isWarning: isWarning,
+          });
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+          ctx.fillStyle = isWarning ? "#ef4444" : "#0284c7";
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = "#ffffff";
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.save();
+          ctx.fillStyle = "rgba(200, 210, 220, 0.75)";
+          ctx.font = "10px Inter, system-ui, sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "top";
+
+          const shortDate = d.date.length > 5 ? d.date.slice(5) : d.date;
+          ctx.fillText(shortDate, x, margin.top + plotH + 8);
+          ctx.restore();
+        });
+      }
+
+      ctx.restore();
+    }
+
+    canvas.addEventListener("mousemove", function (e) {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      let nearest = null;
+      let minDist = 24;
+
+      chartPoints.forEach((pt) => {
+        const dist = Math.hypot(pt.x - mouseX, pt.y - mouseY);
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = pt;
+        }
+      });
+
+      if (nearest) {
+        hoveredPoint = nearest;
+        tooltip.style.display = "block";
+        tooltip.style.left = nearest.x + "px";
+        tooltip.style.top = nearest.y + "px";
+
+        const statusColor = nearest.isWarning ? "#ef4444" : "#4ade80";
+        tooltip.innerHTML = `
+          <div style="font-weight:700; margin-bottom:2px; color:#f8fafc;">${nearest.date}</div>
+          <div>Weight: <strong>${nearest.weight.toFixed(1)} g</strong></div>
+          <div>% Start: <strong style="color:${statusColor}">${nearest.pct.toFixed(1)}%</strong></div>
+        `;
+      } else {
+        hoveredPoint = null;
+        tooltip.style.display = "none";
+      }
+    });
+
+    canvas.addEventListener("mouseleave", function () {
+      tooltip.style.display = "none";
+      hoveredPoint = null;
+    });
+
+    const ro = new ResizeObserver(() => {
+      renderChart();
+    });
+    ro.observe(container);
+
+    renderChart();
+
+    const inlineGroup = document.getElementById("entries-group");
+    if (inlineGroup) {
+      inlineGroup.addEventListener("input", function (e) {
+        if (
+          e.target.name &&
+          (e.target.name.includes("-date") ||
+            e.target.name.includes("-body_weight_g"))
+        ) {
+          renderChart();
+        }
+      });
+
+      inlineGroup.addEventListener("change", function (e) {
+        renderChart();
+      });
+
+      const observer = new MutationObserver(() => {
+        renderChart();
+      });
+      observer.observe(inlineGroup, { childList: true, subtree: true });
+    }
+  });
+</script>
+<!-- prettier-ignore-start -->
+{% endblock %}
+<!-- prettier-ignore-end -->

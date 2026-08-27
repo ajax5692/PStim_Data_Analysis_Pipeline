@@ -51,6 +51,7 @@ class BodyWeightEntryInline(admin.TabularInline):
 
 @admin.register(MouseBodyWeight)
 class MouseBodyWeightAdmin(SimpleHistoryAdmin):
+    change_form_template = "admin/training_metadata/mousebodyweight/change_form.html"
     inlines = [BodyWeightEntryInline]
 
     list_display = (
