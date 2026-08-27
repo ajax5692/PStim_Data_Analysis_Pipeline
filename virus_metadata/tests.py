@@ -17,7 +17,8 @@ class VirusTrackChangesTest(TestCase):
         create_record = TrackChanges.objects.filter(animal_id="AAV9-TEST").first()
         self.assertEqual(create_record.action, "+")
         self.assertEqual(create_record.category, TrackChanges.CategoryChoices.VIRUS)
-        self.assertEqual(create_record.changes, "Initial Entry")
+        self.assertIn("Initial Entry", create_record.changes)
+        self.assertIn("viral_construct: 'AAV9-hSyn-DIO-jGCaMP8s'", create_record.changes)
 
         # Update
         virus.location_in_fridge = "Rack 2, Box B, Pos 1"

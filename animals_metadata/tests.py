@@ -44,6 +44,10 @@ class AnimalsMetadataTrackChangesTest(TestCase):
         )
         self.assertEqual(inj.virus_id.virus_id, "AAV322")
         self.assertEqual(inj.virus_id_2.virus_id, "AAV418")
+        tc_create = TrackChanges.objects.filter(animal_id="ANM01", category=TrackChanges.CategoryChoices.VIRAL_INJECTION).first()
+        self.assertIsNotNone(tc_create)
+        self.assertIn("Initial Entry", tc_create.changes)
+        self.assertIn("virus_id: 'AAV322 (AAV9-hSyn-DIO-jGCaMP8s)'", tc_create.changes)
         self.assertEqual(TrackChanges.objects.filter(animal_id="ANM01", category=TrackChanges.CategoryChoices.VIRAL_INJECTION).count(), 1)
 
         # Update

@@ -27,7 +27,8 @@ class ImagingSessionTrackChangesTest(TestCase):
         create_record = TrackChanges.objects.filter(animal_id="IMG01").first()
         self.assertEqual(create_record.action, "+")
         self.assertEqual(create_record.category, TrackChanges.CategoryChoices.IMAGING_SESSION)
-        self.assertEqual(create_record.changes, "Initial Entry")
+        self.assertIn("Initial Entry", create_record.changes)
+        self.assertIn("imaging_region: 'V1'", create_record.changes)
 
         # Update
         session.imaging_region = "V2"

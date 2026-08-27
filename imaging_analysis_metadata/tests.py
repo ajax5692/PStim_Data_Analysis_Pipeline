@@ -32,7 +32,8 @@ class AnalysisRunTrackChangesTest(TestCase):
         create_record = TrackChanges.objects.filter(animal_id="ANL01").first()
         self.assertEqual(create_record.action, "+")
         self.assertEqual(create_record.category, TrackChanges.CategoryChoices.ANALYSIS_RUN)
-        self.assertEqual(create_record.changes, "Initial Entry")
+        self.assertIn("Initial Entry", create_record.changes)
+        self.assertIn("frame_rate: '30.0'", create_record.changes)
 
         # Update
         run.notes = "Updated pipeline notes"

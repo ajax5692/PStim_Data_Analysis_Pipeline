@@ -28,7 +28,8 @@ class TrainingSessionTrackChangesTest(TestCase):
         create_record = TrackChanges.objects.filter(animal_id="TRN01").first()
         self.assertEqual(create_record.action, "+")
         self.assertEqual(create_record.category, TrackChanges.CategoryChoices.TRAINING_SESSION)
-        self.assertEqual(create_record.changes, "Initial Entry")
+        self.assertIn("Initial Entry", create_record.changes)
+        self.assertIn("bpod_file_path: '/data/bpod.mat'", create_record.changes)
 
         # Update
         session.notes = "Updated training notes"
