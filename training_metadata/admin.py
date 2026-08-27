@@ -88,6 +88,11 @@ class MouseBodyWeightAdmin(SimpleHistoryAdmin):
         "get_owner_display",
     )
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return self.readonly_fields + ("animal",)
+        return self.readonly_fields
+
     @admin.display(description="Animal ID", ordering="animal__animal_id")
     def get_animal_id(self, obj):
         return obj.animal.animal_id if obj.animal else "-"

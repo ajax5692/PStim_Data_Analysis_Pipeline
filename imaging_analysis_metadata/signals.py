@@ -2,6 +2,7 @@ from django.dispatch import receiver
 from simple_history.signals import post_create_historical_record
 
 from animals_metadata.utils import format_initial_entry, get_user_initials
+
 from .models import AnalysisRun, TrackChanges
 
 
