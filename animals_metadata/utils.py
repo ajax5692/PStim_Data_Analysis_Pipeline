@@ -57,3 +57,34 @@ def get_user_initials(user_or_username):
         return parts[0][:2].upper()
 
     return raw_name
+
+
+def format_initial_entry(history_instance):
+    """
+    Generate a detailed multi-line string of all field values present at record creation.
+    """
+    if not history_instance:
+        return "Initial Entry"
+
+    excluded_fields = {
+        "id",
+        "history_id",
+        "history_date",
+        "history_type",
+        "history_user",
+        "history_user_id",
+        "history_change_reason",
+    }
+
+    entries = []
+    for field in history_instance._meta.fields:
+        if field.name in excluded_fields:
+            continue
+        val = getattr(history_instance, field.name, None)
+        if val is not None and str(val).strip() != "":
+            entries.append(f"{field.name}: '{val}'")
+
+    if entries:
+        return "Initial Entry:\n" + "\n".join(entries)
+    return "Initial Entry"
+

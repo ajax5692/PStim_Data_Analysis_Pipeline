@@ -1,7 +1,7 @@
 from django.dispatch import receiver
 from simple_history.signals import post_create_historical_record
 
-from animals_metadata.utils import get_user_initials
+from animals_metadata.utils import format_initial_entry, get_user_initials
 from .models import AnalysisRun, TrackChanges
 
 
@@ -24,7 +24,7 @@ def create_track_change(sender, instance, history_instance, **kwargs):
     prev_record = history_instance.prev_record
 
     if history_instance.history_type == "+":
-        changes_text = "Initial Entry"
+        changes_text = format_initial_entry(history_instance)
 
     elif history_instance.history_type == "-":
         changes_text = "Deleted Record"
