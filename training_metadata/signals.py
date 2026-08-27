@@ -2,7 +2,7 @@ from django.dispatch import receiver
 from simple_history.signals import post_create_historical_record
 
 from animals_metadata.utils import get_user_initials
-from .models import MouseBodyWeightRecord, TrackChanges, TrainingSession
+from .models import BodyWeightEntry, MouseBodyWeight, TrackChanges, TrainingSession
 
 
 @receiver(post_create_historical_record)
@@ -12,17 +12,38 @@ def create_track_change(sender, instance, history_instance, **kwargs):
 
     if model is TrainingSession:
         category = TrackChanges.CategoryChoices.TRAINING_SESSION
-    elif model is MouseBodyWeightRecord:
+        try:
+            animal_id = instance.animal.animal_id
+        except Exception:
+            animal_id = getattr(history_instance, "animal_id", None)
+            if animal_id is not None:
+                animal_id = str(animal_id)
+
+    elif model is MouseBodyWeight:
         category = TrackChanges.CategoryChoices.MOUSE_BODY_WEIGHT
+        try:
+            animal_id = instance.animal.animal_id
+        except Exception:
+            animal_id = getattr(history_instance, "animal_id", None)
+            if animal_id is not None:
+                animal_id = str(animal_id)
+
+    elif model is BodyWeightEntry:
+        category = TrackChanges.CategoryChoices.MOUSE_BODY_WEIGHT
+        try:
+            animal_id = instance.tracker.animal.animal_id
+        except Exception:
+            tracker_id = getattr(history_instance, "tracker_id", None)
+            if tracker_id is not None:
+                try:
+                    tracker = MouseBodyWeight.objects.get(pk=tracker_id)
+                    animal_id = tracker.animal.animal_id
+                except Exception:
+                    animal_id = str(tracker_id)
+            else:
+                animal_id = None
     else:
         return
-
-    try:
-        animal_id = instance.animal.animal_id
-    except Exception:
-        animal_id = getattr(history_instance, "animal_id", None)
-        if animal_id is not None:
-            animal_id = str(animal_id)
 
     # Build human-readable change description
     prev_record = history_instance.prev_record

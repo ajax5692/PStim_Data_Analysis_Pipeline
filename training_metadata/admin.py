@@ -1,7 +1,7 @@
 from django.contrib import admin
 from simple_history.admin import SimpleHistoryAdmin
 
-from .models import MouseBodyWeightRecord, TrackChanges, TrainingSession
+from .models import BodyWeightEntry, MouseBodyWeight, TrackChanges, TrainingSession
 
 
 @admin.register(TrainingSession)
@@ -29,51 +29,82 @@ class TrainingSessionAdmin(SimpleHistoryAdmin):
     ordering = ("-training_date",)
 
 
-@admin.register(MouseBodyWeightRecord)
-class MouseBodyWeightRecordAdmin(SimpleHistoryAdmin):
-    list_display = (
-        "get_mouse_id",
-        "get_owner",
+class BodyWeightEntryInline(admin.TabularInline):
+    model = BodyWeightEntry
+    extra = 1
+    fields = (
         "date",
         "body_weight_g",
         "display_percent_body_weight",
         "notes",
     )
+    readonly_fields = (
+        "display_percent_body_weight",
+    )
+
+    @admin.display(description="% Body Weight Compared to Start")
+    def display_percent_body_weight(self, obj):
+        if obj and obj.percent_body_weight is not None:
+            return f"{obj.percent_body_weight:.1f} %"
+        return "-"
+
+
+@admin.register(MouseBodyWeight)
+class MouseBodyWeightAdmin(SimpleHistoryAdmin):
+    inlines = [BodyWeightEntryInline]
+
+    list_display = (
+        "get_animal_id",
+        "get_owner",
+    )
 
     list_filter = (
-        "animal",
         "animal__owner",
-        "date",
     )
 
     search_fields = (
         "animal__animal_id",
         "animal__owner",
-        "notes",
     )
 
     ordering = (
-        "-date",
-        "animal",
+        "animal__animal_id",
+    )
+
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "animal",
+                    "get_owner_display",
+                ),
+            },
+        ),
     )
 
     readonly_fields = (
-        "percent_body_weight",
+        "get_owner_display",
     )
 
-    @admin.display(description="Mouse ID", ordering="animal__animal_id")
-    def get_mouse_id(self, obj):
+    @admin.display(description="Animal ID", ordering="animal__animal_id")
+    def get_animal_id(self, obj):
         return obj.animal.animal_id if obj.animal else "-"
 
     @admin.display(description="Owner", ordering="animal__owner")
     def get_owner(self, obj):
         return obj.animal.owner if obj.animal else "-"
 
-    @admin.display(description="% Body Weight Compared to Start", ordering="percent_body_weight")
-    def display_percent_body_weight(self, obj):
-        if obj.percent_body_weight is not None:
-            return f"{obj.percent_body_weight:.1f} %"
+    @admin.display(description="Owner")
+    def get_owner_display(self, obj):
+        if obj and obj.animal:
+            owner_label = obj.animal.get_owner_display() if hasattr(obj.animal, "get_owner_display") else obj.animal.owner
+            return f"{owner_label} ({obj.animal.owner})"
         return "-"
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        form.instance.recalculate_percentages()
 
 
 from animals_metadata.utils import get_user_initials

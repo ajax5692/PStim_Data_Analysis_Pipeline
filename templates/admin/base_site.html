@@ -985,76 +985,145 @@
   }
 
   /* =========================================================
-     MICE BODY WEIGHT RECORDS TABLE
+     MICE BODY WEIGHT RECORDS TABLE — MAIN LIST
      ========================================================= */
 
-  body.app-training_metadata.model-mousebodyweightrecord.change-list
+  body.app-training_metadata.model-mousebodyweight.change-list
     #result_list
-    th.column-get_mouse_id,
-  body.app-training_metadata.model-mousebodyweightrecord.change-list
+    th.column-get_animal_id,
+  body.app-training_metadata.model-mousebodyweight.change-list
     #result_list
-    td.field-get_mouse_id {
-    width: 80px !important;
-    min-width: 80px !important;
-    max-width: 100px !important;
-  }
-
-  body.app-training_metadata.model-mousebodyweightrecord.change-list
-    #result_list
-    th.column-get_owner,
-  body.app-training_metadata.model-mousebodyweightrecord.change-list
-    #result_list
-    td.field-get_owner {
-    width: 70px !important;
-    min-width: 60px !important;
-    max-width: 80px !important;
-  }
-
-  body.app-training_metadata.model-mousebodyweightrecord.change-list
-    #result_list
-    th.column-date,
-  body.app-training_metadata.model-mousebodyweightrecord.change-list
-    #result_list
-    td.field-date {
-    width: 110px !important;
-    min-width: 100px !important;
-    max-width: 120px !important;
-  }
-
-  body.app-training_metadata.model-mousebodyweightrecord.change-list
-    #result_list
-    th.column-body_weight_g,
-  body.app-training_metadata.model-mousebodyweightrecord.change-list
-    #result_list
-    td.field-body_weight_g {
-    width: 150px !important;
-    min-width: 130px !important;
-    max-width: 170px !important;
-  }
-
-  body.app-training_metadata.model-mousebodyweightrecord.change-list
-    #result_list
-    th.column-display_percent_body_weight,
-  body.app-training_metadata.model-mousebodyweightrecord.change-list
-    #result_list
-    td.field-display_percent_body_weight {
-    width: 220px !important;
-    min-width: 180px !important;
-    max-width: 250px !important;
+    td.field-get_animal_id {
+    width: 140px !important;
+    min-width: 120px !important;
+    max-width: 180px !important;
     font-weight: 600 !important;
   }
 
-  body.app-training_metadata.model-mousebodyweightrecord.change-list
+  body.app-training_metadata.model-mousebodyweight.change-list
     #result_list
+    th.column-get_owner,
+  body.app-training_metadata.model-mousebodyweight.change-list
+    #result_list
+    td.field-get_owner {
+    width: 120px !important;
+    min-width: 100px !important;
+    max-width: 160px !important;
+  }
+
+  /* =========================================================
+     MICE BODY WEIGHT ENTRIES — TABULAR INLINE TABLE
+     ========================================================= */
+
+  /* 1. Reduce space between "Owner" and "BODY WEIGHT ENTRIES" bar */
+  body.app-training_metadata.model-mousebodyweight .inline-group {
+    margin-top: 10px !important; /* Default was 25px - 30px */
+  }
+  /* 2. Reduce space above table headers (DATE, BODY WEIGHT, etc.) */
+  body.app-training_metadata.model-mousebodyweight
+    .inline-related
+    table
+    thead
+    th {
+    padding-top: 4px !important; /* Adjust this to reduce header height */
+    padding-bottom: 4px !important;
+  }
+  /* 3. Align table rows and reduce vertical padding above the Date input */
+  body.app-training_metadata.model-mousebodyweight .inline-related table td {
+    padding-top: 6px !important; /* Adjust this to bring the date input closer to the header */
+    padding-bottom: 6px !important;
+    vertical-align: middle !important; /* Centers inputs vertically with notes */
+  }
+  /* 4. Column width for Date */
+  body.app-training_metadata.model-mousebodyweight
+    .inline-related
+    table
+    th.column-date,
+  body.app-training_metadata.model-mousebodyweight
+    .inline-related
+    table
+    td.field-date {
+    width: 200px !important;
+    min-width: 200px !important;
+    padding-top: 6px !important; /* Adjust top padding specifically for Date */
+  }
+
+  body.app-training_metadata.model-mousebodyweight
+    .inline-related
+    table
+    th.column-date,
+  body.app-training_metadata.model-mousebodyweight
+    .inline-related
+    table
+    td.field-date {
+    width: 200px !important;
+    min-width: 200px !important;
+  }
+
+  body.app-training_metadata.model-mousebodyweight
+    .inline-related
+    table
+    th.column-body_weight_g,
+  body.app-training_metadata.model-mousebodyweight
+    .inline-related
+    table
+    td.field-body_weight_g {
+    width: 180px !important;
+    min-width: 150px !important;
+  }
+
+  body.app-training_metadata.model-mousebodyweight
+    .inline-related
+    table
+    th.column-display_percent_body_weight,
+  body.app-training_metadata.model-mousebodyweight
+    .inline-related
+    table
+    td.field-display_percent_body_weight {
+    width: 220px !important;
+    min-width: 180px !important;
+    font-weight: 600 !important;
+  }
+
+  /* 1. Set the column width */
+  body.app-training_metadata.model-mousebodyweight
+    .inline-related
+    table
     th.column-notes,
-  body.app-training_metadata.model-mousebodyweightrecord.change-list
-    #result_list
+  body.app-training_metadata.model-mousebodyweight
+    .inline-related
+    table
     td.field-notes {
-    width: 45% !important;
-    min-width: 250px !important;
-    white-space: normal !important;
-    overflow-wrap: anywhere !important;
-    line-height: 1.4 !important;
+    width: 450px !important; /* <--- Adjust this value (e.g. 300px, 450px, 600px) */
+    min-width: 200px !important;
+    max-width: 700px !important;
+  }
+
+  /* 2. Make the textarea fill the column width */
+  body.app-training_metadata.model-mousebodyweight
+    .inline-related
+    table
+    td.field-notes
+    textarea {
+    width: 100% !important; /* <--- This allows the textarea to stretch/shrink with the column */
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 80px !important;
+    padding: 4px 8px !important;
+    resize: vertical !important;
+  }
+
+  /* =========================================================
+     HIDE TIMEZONE WARNINGS
+     ========================================================= */
+
+  .timezonewarning,
+  .datetime-warning,
+  .timezonenote,
+  .time-zone-warning {
+    display: none !important;
   }
 
   /* =========================================================
@@ -1294,7 +1363,7 @@
           Training Sessions
         </a>
 
-        <a href="/admin/training_metadata/mousebodyweightrecord/">
+        <a href="/admin/training_metadata/mousebodyweight/">
           Mice Body Weight Records
         </a>
 
