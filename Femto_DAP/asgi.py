@@ -1,5 +1,5 @@
 """
-ASGI config for PStim_DAP project.
+ASGI config for Femto_DAP project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'PStim_DAP.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Femto_DAP.settings')
 
 application = get_asgi_application()
