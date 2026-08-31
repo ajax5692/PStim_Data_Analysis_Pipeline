@@ -1,55 +1,58 @@
 from django.db import models
 from simple_history.models import HistoricalRecords
 
-from .validators import validate_measurement_unit_ranges
+from animals_metadata.models import Animal
 
 
-class ImagingSession(models.Model):
-    animal = models.ForeignKey(
-        "animals_metadata.Animal",
-        on_delete=models.PROTECT,
-        related_name="imaging_sessions",
+class Virus(models.Model):
+    virus_id = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name="Virus ID",
     )
 
-    acquisition_date = models.DateField()
+    viral_construct = models.CharField(
+        max_length=255,
+        verbose_name="Viral Construct",
+    )
 
-    imaging_region = models.CharField(
+    titre = models.CharField(
         max_length=100,
         blank=True,
         null=True,
+        verbose_name="Titre",
     )
 
-    mesc_file_path = models.CharField(
-        max_length=500,
-        help_text="Path to the source .mesc file.",
-    )
-
-    measurement_unit_ranges = models.CharField(
+    location_in_fridge = models.CharField(
         max_length=200,
-        validators=[validate_measurement_unit_ranges],
-        help_text="Example: 10:21,25:55",
-    )
-
-    notes = models.TextField(
         blank=True,
         null=True,
+        verbose_name="Location in -80°C Fridge",
+    )
+
+    virus_owner = models.CharField(
+        max_length=100,
+        choices=Animal.OwnerChoices.choices,
+        blank=True,
+        null=True,
+        verbose_name="Virus Owner",
     )
 
     history = HistoricalRecords()
 
     class Meta:
-        verbose_name = "Imaging Session"
-        verbose_name_plural = "Imaging Sessions"
-        ordering = ["-acquisition_date"]
+        verbose_name = "Virus"
+        verbose_name_plural = "Viruses"
+        ordering = ["virus_id"]
 
     def __str__(self):
-        return f"{self.animal.animal_id} - {self.acquisition_date}"
+        return f"{self.virus_id} ({self.viral_construct})"
 
 
 class TrackChanges(models.Model):
 
     class CategoryChoices(models.TextChoices):
-        IMAGING_SESSION = "imaging_session", "Imaging Session"
+        VIRUS = "virus", "Virus"
 
     class ActionChoices(models.TextChoices):
         CREATED = "+", "Created"
@@ -65,6 +68,7 @@ class TrackChanges(models.Model):
         max_length=100,
         blank=True,
         null=True,
+        verbose_name="Virus ID",
     )
 
     action = models.CharField(
@@ -92,3 +96,4 @@ class TrackChanges(models.Model):
 
     def __str__(self):
         return f"{self.get_category_display()} - {self.animal_id}"
+

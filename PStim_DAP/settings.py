@@ -44,6 +44,9 @@ INSTALLED_APPS = [
     'simple_history',
     'animals_metadata',
     'imaging_metadata',
+    'imaging_analysis_metadata',
+    'training_metadata',
+    'virus_metadata',
 ]
 
 MIDDLEWARE = [
@@ -62,7 +65,7 @@ ROOT_URLCONF = 'PStim_DAP.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
