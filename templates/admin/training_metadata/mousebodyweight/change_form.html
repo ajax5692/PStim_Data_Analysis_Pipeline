@@ -1,5 +1,7 @@
-{% extends "admin/change_form.html" %} {% load i18n admin_urls static %} {%
-block field_sets %}
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static %}
+
+{% block field_sets %}
 <div class="mbw-layout-row">
   <div class="mbw-fields-column">{{ block.super }}</div>
 
@@ -332,6 +334,18 @@ block field_sets %}
       hoveredPoint = null;
     });
 
+    function enforceNonNegativeWeights() {
+      const weightInputs = document.querySelectorAll(
+        'input[type="number"][name$="-body_weight_g"], input[name$="-body_weight_g"]'
+      );
+      weightInputs.forEach((input) => {
+        input.setAttribute("min", "0");
+        input.setAttribute("step", "0.1");
+      });
+    }
+
+    enforceNonNegativeWeights();
+
     const ro = new ResizeObserver(() => {
       renderChart();
     });
@@ -342,6 +356,11 @@ block field_sets %}
     const inlineGroup = document.getElementById("entries-group");
     if (inlineGroup) {
       inlineGroup.addEventListener("input", function (e) {
+        if (e.target.name && e.target.name.includes("-body_weight_g")) {
+          if (parseFloat(e.target.value) < 0) {
+            e.target.value = "0";
+          }
+        }
         if (
           e.target.name &&
           (e.target.name.includes("-date") ||
@@ -356,6 +375,7 @@ block field_sets %}
       });
 
       const observer = new MutationObserver(() => {
+        enforceNonNegativeWeights();
         renderChart();
       });
       observer.observe(inlineGroup, { childList: true, subtree: true });
