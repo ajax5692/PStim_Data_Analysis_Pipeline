@@ -1,6 +1,9 @@
+from django import forms
 from django.contrib import admin
+from django.db import models
 from simple_history.admin import SimpleHistoryAdmin
 
+from animals_metadata.utils import get_user_initials
 from .models import BodyWeightEntry, MouseBodyWeight, TrackChanges, TrainingSession
 
 
@@ -31,7 +34,7 @@ class TrainingSessionAdmin(SimpleHistoryAdmin):
 
 class BodyWeightEntryInline(admin.TabularInline):
     model = BodyWeightEntry
-    extra = 1
+    extra = 0
     fields = (
         "date",
         "body_weight_g",
@@ -41,6 +44,11 @@ class BodyWeightEntryInline(admin.TabularInline):
     readonly_fields = (
         "display_percent_body_weight",
     )
+    formfield_overrides = {
+        models.FloatField: {
+            "widget": forms.NumberInput(attrs={"min": "0", "step": "0.1"}),
+        },
+    }
 
     @admin.display(description="% Body Weight Compared to Start")
     def display_percent_body_weight(self, obj):
@@ -113,9 +121,6 @@ class MouseBodyWeightAdmin(SimpleHistoryAdmin):
         form.instance.recalculate_percentages()
 
 
-from animals_metadata.utils import get_user_initials
-
-
 @admin.register(TrackChanges)
 class TrackChangesAdmin(admin.ModelAdmin):
     list_display = (
@@ -163,4 +168,4 @@ class TrackChangesAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
-        return False
+        return False
