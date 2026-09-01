@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator
 from django.db import models
 from simple_history.models import HistoricalRecords
 
@@ -87,6 +88,7 @@ class BodyWeightEntry(models.Model):
 
     body_weight_g = models.FloatField(
         verbose_name="Body Weight in Grams",
+        validators=[MinValueValidator(0.01, message="Body weight must be greater than 0.")],
     )
 
     percent_body_weight = models.FloatField(

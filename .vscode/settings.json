@@ -1,0 +1,10 @@
+{
+  "files.associations": {
+    "**/templates/**/*.html": "django-html"
+  },
+  "html.format.wrapLineLength": 0,
+  "html.format.unformatted": "wbr, template",
+  "[django-html]": {
+    "editor.formatOnSave": false
+  }
+}
