@@ -1,8 +1,16 @@
 {% extends "admin/base.html" %} {% block branding %}
 <div id="site-name">
-  <a href="{% url 'admin:index' %}"> Django administration </a>
+  <a href="{% url 'admin:index' %}"> PhotoStim Data Administration </a>
 </div>
 {% endblock %} {% block extrastyle %} {{ block.super }}
+{% block extrahead %}
+{{ block.super }}
+<script>
+  // Enforce dark mode immediately before render
+  document.documentElement.dataset.theme = "dark";
+  localStorage.setItem("theme", "dark");
+</script>
+{% endblock %}
 
 <style>
   /* =========================================================
@@ -14,6 +22,11 @@
     --admin-filter-gap: 18px;
   }
 
+  /* Hide the theme toggle button */
+  .theme-toggle {
+    display: none !important;
+  }
+  
   /* =========================================================
      ANALYSIS RUNNING SPINNER
      ========================================================= */
