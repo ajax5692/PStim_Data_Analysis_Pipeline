@@ -70,7 +70,7 @@ def build_analysis_command(analysis_run, result_file):
 
 def run_suite2p_analysis(analysis_run):
     with tempfile.TemporaryDirectory() as temp_dir:
-        result_file = Path(temp_dir) / "analysis_result.json"
+        result_file = Path(temp_dir) / "imaging_analysis_result.json"
 
         command = build_analysis_command(
             analysis_run,

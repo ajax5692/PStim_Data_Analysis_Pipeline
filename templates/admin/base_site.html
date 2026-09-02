@@ -984,6 +984,65 @@
     min-width: 90px !important;
   }
 
+    /* =========================================================
+     TRAINING SESSIONS TABLE (FIXED PIXELS)
+     ========================================================= */
+
+  /* Checkbox */
+  body.app-training_metadata.model-trainingsession.change-list #result_list th:nth-child(1),
+  body.app-training_metadata.model-trainingsession.change-list #result_list td:nth-child(1) {
+    width: 35px !important;
+    min-width: 35px !important;
+  }
+
+  /* Animal ID */
+  body.app-training_metadata.model-trainingsession.change-list #result_list th.column-animal,
+  body.app-training_metadata.model-trainingsession.change-list #result_list td.field-animal {
+    width: 40px !important;
+  }
+
+  /* Training Date */
+  body.app-training_metadata.model-trainingsession.change-list #result_list th.column-training_date,
+  body.app-training_metadata.model-trainingsession.change-list #result_list td.field-training_date {
+    width: 60px !important;
+  }
+
+  /* Status */
+  body.app-training_metadata.model-trainingsession.change-list #result_list th.column-display_status,
+  body.app-training_metadata.model-trainingsession.change-list #result_list td.field-display_status {
+    width: 60px !important;
+  }
+
+  /* BPod File Path */
+  body.app-training_metadata.model-trainingsession.change-list #result_list th.column-display_bpod_file_path,
+  body.app-training_metadata.model-trainingsession.change-list #result_list td.field-display_bpod_file_path {
+    width: 300px !important;
+  }
+
+  /* Training Unit Range */
+  body.app-training_metadata.model-trainingsession.change-list #result_list th.column-training_unit_range,
+  body.app-training_metadata.model-trainingsession.change-list #result_list td.field-training_unit_range {
+    width: 200px !important;
+    padding-left: 10px !important;
+  }
+   /* Padding for the data values */
+  body.app-training_metadata.model-trainingsession.change-list #result_list td.field-training_unit_range {
+    padding-left: 20px !important;
+    text-align: left !important;
+  }
+
+  /* Lick Analysis */
+  body.app-training_metadata.model-trainingsession.change-list #result_list th.column-display_lick_traces_link,
+  body.app-training_metadata.model-trainingsession.change-list #result_list td.field-display_lick_traces_link {
+    width: 80px !important;
+  }
+
+  /* Created At */
+  body.app-training_metadata.model-trainingsession.change-list #result_list th.column-created_at,
+  body.app-training_metadata.model-trainingsession.change-list #result_list td.field-created_at {
+    width: 100px !important;
+  }
+
   /* =========================================================
      MICE BODY WEIGHT RECORDS TABLE — MAIN LIST
      ========================================================= */
@@ -1634,9 +1693,9 @@
        ANALYSIS RUN LIVE POLLING
        ======================================================= */
 
-    const isAnalysisRunPage = path.includes(
-      "/admin/imaging_analysis_metadata/analysisrun/",
-    );
+    const isAnalysisRunPage =
+      path.includes("/admin/imaging_analysis_metadata/analysisrun/") ||
+      path.includes("/admin/training_metadata/trainingsession/");
 
     const currentTable = document.querySelector("#result_list");
 

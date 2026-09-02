@@ -51,23 +51,40 @@ class AnalysisRunAdmin(SimpleHistoryAdmin):
     def display_status(self, obj):
         if obj.status == AnalysisRun.StatusChoices.RUNNING:
             return format_html(
-                '<span style="display: inline-flex; align-items: center; gap: 6px;">'
-                    '<span>{}</span>'
-                    '<span style="'
-                        'width: 12px;'
-                        'height: 12px;'
-                        'border: 2px solid rgba(255,255,255,0.35);'
-                        'border-top-color: currentColor;'
-                        'border-radius: 50%;'
-                        'display: inline-block;'
-                        'animation: analysis-spin 0.8s linear infinite;'
-                        'flex-shrink: 0;'
-                    '"></span>'
+                '<span style="display: inline-flex; align-items: center; gap: 6px; color: #60a5fa; font-weight: 600;">'
+                '<span>{}</span>'
+                '<span style="'
+                'width: 12px;'
+                'height: 12px;'
+                'border: 2px solid rgba(255,255,255,0.35);'
+                'border-top-color: currentColor;'
+                'border-radius: 50%;'
+                'display: inline-block;'
+                'animation: analysis-spin 0.8s linear infinite;'
+                'flex-shrink: 0;'
+                '"></span>'
                 '</span>',
-                obj.get_status_display(),
+                "Running",
             )
-
-        return obj.get_status_display()
+        elif obj.status == AnalysisRun.StatusChoices.COMPLETED:
+            return format_html(
+                '<span style="display: inline-flex; align-items: center; gap: 4px; color: #4ade80; font-weight: 600;">'
+                '<span>{}</span>'
+                '</span>',
+                "✓ Completed",
+            )
+        elif obj.status == AnalysisRun.StatusChoices.FAILED:
+            return format_html(
+                '<span style="display: inline-flex; align-items: center; gap: 4px; color: #f87171; font-weight: 600;" title="{}">'
+                '<span>{}</span>'
+                '</span>',
+                obj.error_message or "Analysis failed",
+                "✗ Failed",
+            )
+        return format_html(
+            '<span style="color: #facc15; font-weight: 600;">{}</span>',
+            "Pending",
+        )
 
     @admin.display(description="Output Resource Path")
     def display_output_resources(self, obj):

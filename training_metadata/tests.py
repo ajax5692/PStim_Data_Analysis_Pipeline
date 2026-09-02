@@ -1,10 +1,20 @@
+import os
+import tempfile
 from datetime import timedelta
+from pathlib import Path
 
-from django.test import TestCase
+from django.contrib.auth import get_user_model
+from django.test import Client, TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from animals_metadata.models import Animal
 from .models import BodyWeightEntry, MouseBodyWeight, TrackChanges, TrainingSession
+from .services import (
+    claim_next_pending_training_session,
+    execute_training_analysis,
+    process_next_training_analysis,
+)
 
 
 class TrainingSessionTrackChangesTest(TestCase):
@@ -107,4 +117,59 @@ class TrainingSessionTrackChangesTest(TestCase):
         self.assertIsNotNone(delete_track)
 
 
+class TrainingAnalysisServiceAndAdminTest(TestCase):
+    def setUp(self):
+        self.animal = Animal.objects.create(
+            animal_id="m67",
+            sex="M",
+            genotype="Thy1-gcamp6s",
+            dob=timezone.now().date(),
+        )
+        self.user = get_user_model().objects.create_superuser(
+            username="admin_test",
+            email="admin@example.com",
+            password="testpassword123",
+        )
+        self.client = Client()
+        self.client.force_login(self.user)
 
+    def test_status_lifecycle_and_service_execution(self):
+        test_mat_path = r"C:\Users\abhrajyoti.chakrabarti\Desktop\64gb_usb_dump\TrainingData\m67_new_VisGo_GoProb_Train_measure_20250926_132921.mat"
+
+        session = TrainingSession.objects.create(
+            animal=self.animal,
+            training_date=timezone.now().date(),
+            bpod_file_path=test_mat_path if os.path.exists(test_mat_path) else "dummy.mat",
+            training_unit_range="10:21",
+        )
+        self.assertEqual(session.status, TrainingSession.StatusChoices.PENDING)
+
+        # Test claiming
+        claimed = claim_next_pending_training_session()
+        self.assertIsNotNone(claimed)
+        self.assertEqual(claimed.pk, session.pk)
+        self.assertEqual(claimed.status, TrainingSession.StatusChoices.RUNNING)
+
+        if os.path.exists(test_mat_path):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                execute_training_analysis(claimed, output_dir=tmpdir)
+                claimed.refresh_from_db()
+                self.assertEqual(claimed.status, TrainingSession.StatusChoices.COMPLETED)
+                self.assertTrue(bool(claimed.output_plot_path))
+                self.assertTrue(bool(claimed.output_raster_path))
+                self.assertTrue(bool(claimed.output_excel_path))
+                self.assertIn("n_trials", claimed.metrics_json)
+                self.assertEqual(claimed.metrics_json["n_trials"], 167)
+
+    def test_admin_lick_traces_view(self):
+        session = TrainingSession.objects.create(
+            animal=self.animal,
+            training_date=timezone.now().date(),
+            bpod_file_path="/data/test.mat",
+            training_unit_range="1:10",
+        )
+        url = reverse("admin:training_session_lick_traces", args=[session.pk])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"Animal {self.animal.animal_id}")
+        self.assertContains(response, "Average Licking Trace")
