@@ -1,0 +1,425 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label='training_metadata' %}">Training Metadata</a>
+  &rsaquo; <a href="{% url 'admin:training_metadata_trainingsession_changelist' %}">Training Sessions</a>
+  &rsaquo; {{ session.animal.animal_id }} ({{ session.training_date }}) - Lick Traces
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+  .tt-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .tt-header-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .tt-title-group h1 {
+    margin: 0 0 6px 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .tt-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    color: #94a3b8;
+    font-size: 13px;
+  }
+
+  .tt-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tt-meta-item strong {
+    color: #e2e8f0;
+  }
+
+  .tt-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .tt-badge.completed {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+  }
+
+  .tt-badge.running {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+  }
+
+  .tt-badge.failed {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+  }
+
+  .tt-badge.pending {
+    background: rgba(234, 179, 8, 0.15);
+    color: #facc15;
+    border: 1px solid rgba(234, 179, 8, 0.35);
+  }
+
+  .tt-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .tt-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+
+  .tt-btn-primary {
+    background: #0284c7;
+    color: #ffffff !important;
+  }
+  .tt-btn-primary:hover {
+    background: #0369a1;
+  }
+
+  .tt-btn-secondary {
+    background: #334155;
+    color: #f1f5f9 !important;
+    border: 1px solid #475569;
+  }
+  .tt-btn-secondary:hover {
+    background: #475569;
+  }
+
+  .tt-btn-success {
+    background: #16a34a;
+    color: #ffffff !important;
+  }
+  .tt-btn-success:hover {
+    background: #15803d;
+  }
+
+  .tt-plots-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  @media (min-width: 1024px) {
+    .tt-plots-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .tt-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tt-card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .tt-plot-img-container {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 380px;
+  }
+
+  .tt-plot-img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    display: block;
+  }
+
+  .tt-metrics-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+
+  .tt-metrics-table th, .tt-metrics-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid #334155;
+    font-size: 13px;
+  }
+
+  .tt-metrics-table th {
+    color: #94a3b8;
+    font-weight: 600;
+    background: #0f172a;
+  }
+
+  .tt-metrics-table td {
+    color: #e2e8f0;
+  }
+
+  .tt-empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: #94a3b8;
+  }
+
+  .tt-empty-state svg {
+    margin-bottom: 12px;
+    opacity: 0.6;
+  }
+
+  .tt-error-banner {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+</style>
+
+<div class="tt-container">
+  <!-- Header Card -->
+  <div class="tt-header-card">
+    <div class="tt-title-group">
+      <h1>
+        <span>Animal {{ session.animal.animal_id }}</span>
+        <span style="font-size: 18px; color: #94a3b8; font-weight: 400;">&bull; Training Date: {{ session.training_date }}</span>
+        <span class="tt-badge {{ session.status }}">
+          <span>{{ session.get_status_display }}</span>
+          {% if session.status == 'running' %}
+          <span style="width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.35); border-top-color: currentColor; border-radius: 50%; display: inline-block; animation: analysis-spin 0.8s linear infinite; flex-shrink: 0;"></span>
+          {% endif %}
+        </span>
+      </h1>
+      <div class="tt-meta-row">
+        <div class="tt-meta-item">
+          <span>Owner:</span>
+          <strong>{{ session.animal.get_owner_display|default:session.animal.owner }}</strong>
+        </div>
+        <div class="tt-meta-item">
+          <span>Sex:</span>
+          <strong>{{ session.animal.get_sex_display|default:session.animal.sex }}</strong>
+        </div>
+        <div class="tt-meta-item">
+          <span>Genotype:</span>
+          <strong>{{ session.animal.genotype|default:"-" }}</strong>
+        </div>
+        <div class="tt-meta-item">
+          <span>Units:</span>
+          <strong>{{ session.training_unit_range|default:"-" }}</strong>
+        </div>
+        <div class="tt-meta-item">
+          <span>BPod File:</span>
+          <button type="button" class="pstim-copy-button" data-copy-text="{{ session.bpod_file_path }}" title="Copy BPod file path" aria-label="Copy BPod file path" style="background: transparent; border: none; cursor: pointer; color: #94a3b8; padding: 0 4px; display: inline-flex; align-items: center;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>
+          </button>
+          <code style="font-size: 11px; background: #0f172a; padding: 2px 6px; border-radius: 4px; color: #38bdf8;">{{ session.bpod_file_path }}</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="tt-actions">
+      {% if session.output_excel_path %}
+      <a href="{{ session.output_excel_path }}" download class="tt-btn tt-btn-success" title="Download exported Excel lick traces">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Excel
+      </a>
+      {% endif %}
+
+      <form method="post" action="{% url 'admin:training_session_run_analysis' session.pk %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" class="tt-btn tt-btn-primary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          {% if session.status == 'completed' %}Re-run Analysis{% else %}Run Analysis Now{% endif %}
+        </button>
+      </form>
+
+      <a href="{% url 'admin:training_metadata_trainingsession_changelist' %}" class="tt-btn tt-btn-secondary">
+        &larr; Back to Sessions
+      </a>
+    </div>
+  </div>
+
+  {% if session.error_message %}
+  <div class="tt-error-banner">
+    <strong>Analysis Error:</strong> {{ session.error_message }}
+  </div>
+  {% endif %}
+
+  <!-- Primary Plots Grid -->
+  <div class="tt-plots-grid">
+    <!-- Card 1: Averaged Licking Traces -->
+    <div class="tt-card">
+      <div class="tt-card-title">
+        <span>Average Licking Trace (Go vs No-Go)</span>
+        {% if session.output_plot_path %}
+        <a href="{{ session.output_plot_path }}" target="_blank" class="tt-btn tt-btn-secondary" style="padding: 4px 10px; font-size: 11px;">
+          View Full Size &nearr;
+        </a>
+        {% endif %}
+      </div>
+      <div class="tt-plot-img-container">
+        {% if session.output_plot_path %}
+        <img src="{{ session.output_plot_path }}" alt="Average Licking Trace" class="tt-plot-img" />
+        {% else %}
+        <div class="tt-empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <div>No lick trace plot generated yet.</div>
+          <div style="font-size: 12px; margin-top: 4px;">Click <strong>Run Analysis Now</strong> above to process the BPod session.</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Card 2: Lick Occurrences Raster -->
+    <div class="tt-card">
+      <div class="tt-card-title">
+        <span>Individual Lick Occurrences (Raster)</span>
+        {% if session.output_raster_path %}
+        <a href="{{ session.output_raster_path }}" target="_blank" class="tt-btn tt-btn-secondary" style="padding: 4px 10px; font-size: 11px;">
+          View Full Size &nearr;
+        </a>
+        {% endif %}
+      </div>
+      <div class="tt-plot-img-container">
+        {% if session.output_raster_path %}
+        <img src="{{ session.output_raster_path }}" alt="Lick Occurrences Raster" class="tt-plot-img" />
+        {% else %}
+        <div class="tt-empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <div>No raster plot generated yet.</div>
+          <div style="font-size: 12px; margin-top: 4px;">Click <strong>Run Analysis Now</strong> above to process the BPod session.</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Behavioral Metrics Summary Card -->
+  {% if session.metrics_json %}
+  <div class="tt-card">
+    <div class="tt-card-title">
+      <span>Behavioral Session Summary Metrics</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px;">
+      <div style="background: #0f172a; padding: 12px 16px; border-radius: 8px; border: 1px solid #334155;">
+        <div style="color: #94a3b8; font-size: 12px;">Total Trials</div>
+        <div style="font-size: 20px; font-weight: 700; color: #f8fafc;">{{ session.metrics_json.n_trials }}</div>
+      </div>
+      <div style="background: #0f172a; padding: 12px 16px; border-radius: 8px; border: 1px solid #334155;">
+        <div style="color: #94a3b8; font-size: 12px;">Trials with Lick</div>
+        <div style="font-size: 20px; font-weight: 700; color: #4ade80;">{{ session.metrics_json.trials_with_lick }}</div>
+      </div>
+      <div style="background: #0f172a; padding: 12px 16px; border-radius: 8px; border: 1px solid #334155;">
+        <div style="color: #94a3b8; font-size: 12px;">Excluded Trials</div>
+        <div style="font-size: 20px; font-weight: 700; color: #94a3b8;">{{ session.metrics_json.excluded_trials }}</div>
+      </div>
+      <div style="background: #0f172a; padding: 12px 16px; border-radius: 8px; border: 1px solid #334155;">
+        <div style="color: #94a3b8; font-size: 12px;">Stimulus Onset & Duration</div>
+        <div style="font-size: 18px; font-weight: 700; color: #38bdf8;">{{ session.metrics_json.stimulus_onset }}s <span style="font-size: 13px; font-weight: 400; color: #94a3b8;">(dur: {{ session.metrics_json.stimulus_duration }}s)</span></div>
+      </div>
+      <div style="background: #0f172a; padding: 12px 16px; border-radius: 8px; border: 1px solid #334155;">
+        <div style="color: #94a3b8; font-size: 12px;">Reward Onset</div>
+        <div style="font-size: 18px; font-weight: 700; color: #facc15;">{{ session.metrics_json.reward_onset }}s</div>
+      </div>
+      
+    </div>
+
+    <!-- Integrals Table -->
+    {% if session.metrics_json.integral_stimulus %}
+    <table class="tt-metrics-table">
+      <thead>
+        <tr>
+          <th>Trial Type</th>
+          <th>Stimulus Period Integral (Stimulus Onset {{ session.metrics_json.stimulus_onset }}s &ndash; Reward Onset {{ session.metrics_json.reward_onset }}s)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for trial_type, stim_val in session.metrics_json.integral_stimulus.items %}
+        <tr>
+          <td>
+            {% if trial_type == "1" %}
+            <strong style="color: #4ade80;">Go Trials (Type 1)</strong>
+            {% elif trial_type == "2" %}
+            <strong style="color: #f87171;">No-Go Trials (Type 2)</strong>
+            {% else %}
+            Trial Type {{ trial_type }}
+            {% endif %}
+          </td>
+          <td><strong>{{ stim_val }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if session.status == 'running' %}
+<script>
+  setTimeout(function() {
+    window.location.reload();
+  }, 3000);
+</script>
+{% endif %}
+{% endblock %}
+

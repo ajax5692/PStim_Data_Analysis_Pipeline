@@ -1,10 +1,16 @@
+from pathlib import Path
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.db import models
+from django.shortcuts import get_object_or_404, redirect
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
+from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 
 from animals_metadata.utils import get_user_initials
 from .models import BodyWeightEntry, MouseBodyWeight, TrackChanges, TrainingSession
+from .services import execute_training_analysis
 
 
 @admin.register(TrainingSession)
@@ -12,12 +18,15 @@ class TrainingSessionAdmin(SimpleHistoryAdmin):
     list_display = (
         "animal",
         "training_date",
-        "bpod_file_path",
+        "display_status",
+        "display_bpod_file_path",
         "training_unit_range",
-        "notes",
+        "display_lick_traces_link",
+        "created_at",
     )
 
     list_filter = (
+        "status",
         "animal",
         "training_date",
     )
@@ -30,6 +39,195 @@ class TrainingSessionAdmin(SimpleHistoryAdmin):
     )
 
     ordering = ("-training_date",)
+
+    readonly_fields = (
+        "status",
+        "created_at",
+        "started_at",
+        "completed_at",
+        "output_plot_path",
+        "output_raster_path",
+        "output_excel_path",
+        "output_log_path",
+        "metrics_json",
+        "error_message",
+    )
+
+    fieldsets = (
+        (
+            "Session Information",
+            {
+                "fields": (
+                    "animal",
+                    "training_date",
+                    "bpod_file_path",
+                    "training_unit_range",
+                    "notes",
+                ),
+            },
+        ),
+        (
+            "Analysis Status & Results",
+            {
+                "fields": (
+                    "status",
+                    "created_at",
+                    "started_at",
+                    "completed_at",
+                    "output_plot_path",
+                    "output_raster_path",
+                    "output_excel_path",
+                    "metrics_json",
+                    "error_message",
+                ),
+            },
+        ),
+    )
+
+    @admin.display(description="BPod File Path", ordering="bpod_file_path")
+    def display_bpod_file_path(self, obj):
+        bpod_path = obj.bpod_file_path or ""
+        if not bpod_path:
+            return "-"
+
+        return format_html(
+            '<div style="display: grid; '
+            'grid-template-columns: max-content 1fr; '
+            'column-gap: 6px; '
+            'align-items: start;">'
+
+                '<button type="button" '
+                'class="pstim-copy-button" '
+                'data-copy-text="{}" '
+                'title="Copy BPod file path" '
+                'aria-label="Copy BPod file path">'
+
+                    '<svg '
+                    'width="16" '
+                    'height="16" '
+                    'viewBox="0 0 24 24" '
+                    'fill="none" '
+                    'stroke="currentColor" '
+                    'stroke-width="2" '
+                    'stroke-linecap="round" '
+                    'stroke-linejoin="round" '
+                    'aria-hidden="true">'
+
+                        '<rect '
+                        'x="8" '
+                        'y="8" '
+                        'width="12" '
+                        'height="12" '
+                        'rx="2">'
+                        '</rect>'
+
+                        '<path '
+                        'd="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2">'
+                        '</path>'
+
+                    '</svg>'
+
+                '</button>'
+
+                '<span style="overflow-wrap: anywhere;">'
+                '{}'
+                '</span>'
+
+            '</div>',
+            bpod_path,
+            bpod_path,
+        )
+
+    @admin.display(description="Status", ordering="status")
+    def display_status(self, obj):
+        if obj.status == TrainingSession.StatusChoices.RUNNING:
+            return format_html(
+                '<span style="display: inline-flex; align-items: center; gap: 6px; color: #60a5fa; font-weight: 600;">'
+                '<span>{}</span>'
+                '<span style="width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.35); border-top-color: currentColor; border-radius: 50%; display: inline-block; animation: analysis-spin 0.8s linear infinite;"></span>'
+                '</span>',
+                "Running",
+            )
+        elif obj.status == TrainingSession.StatusChoices.COMPLETED:
+            return format_html(
+                '<span style="display: inline-flex; align-items: center; gap: 4px; color: #4ade80; font-weight: 600;">'
+                '<span>{}</span>'
+                '</span>',
+                "✓ Completed",
+            )
+        elif obj.status == TrainingSession.StatusChoices.FAILED:
+            return format_html(
+                '<span style="display: inline-flex; align-items: center; gap: 4px; color: #f87171; font-weight: 600;" title="{}">'
+                '<span>{}</span>'
+                '</span>',
+                obj.error_message or "Analysis failed",
+                "✗ Failed",
+            )
+        return format_html(
+            '<span style="color: #facc15; font-weight: 600;">{}</span>',
+            "Pending",
+        )
+
+    @admin.display(description="Lick Analysis")
+    def display_lick_traces_link(self, obj):
+        url = reverse("admin:training_session_lick_traces", args=[obj.pk])
+        if obj.status == TrainingSession.StatusChoices.COMPLETED:
+            return format_html(
+                '<a href="{}" class="button" style="background: #0284c7; color: white; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 12px;">'
+                '📊 View Traces'
+                '</a>',
+                url,
+            )
+        return format_html(
+            '<a href="{}" class="button" style="background: #334155; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px;">'
+            'Open Viewer'
+            '</a>',
+            url,
+        )
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "<int:session_id>/lick-traces/",
+                self.admin_site.admin_view(self.lick_traces_view),
+                name="training_session_lick_traces",
+            ),
+            path(
+                "<int:session_id>/run-analysis/",
+                self.admin_site.admin_view(self.run_analysis_view),
+                name="training_session_run_analysis",
+            ),
+        ]
+        return custom_urls + urls
+
+    def lick_traces_view(self, request, session_id):
+        session = get_object_or_404(TrainingSession, pk=session_id)
+        context = {
+            **self.admin_site.each_context(request),
+            "session": session,
+            "title": f"Lick Traces: Animal {session.animal.animal_id} ({session.training_date})",
+        }
+        return TemplateResponse(
+            request,
+            "admin/training_metadata/trainingsession/lick_traces.html",
+            context,
+        )
+
+    def run_analysis_view(self, request, session_id):
+        session = get_object_or_404(TrainingSession, pk=session_id)
+        try:
+            execute_training_analysis(session)
+            messages.success(
+                request,
+                f"Training analysis completed successfully for session #{session.pk} (Animal {session.animal.animal_id}).",
+            )
+        except Exception as exc:
+            messages.error(
+                request,
+                f"Training analysis failed: {exc}",
+            )
+        return redirect("admin:training_session_lick_traces", session_id=session.pk)
 
 
 class BodyWeightEntryInline(admin.TabularInline):

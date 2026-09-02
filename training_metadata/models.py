@@ -1,20 +1,47 @@
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
 
 class TrainingSession(models.Model):
+    class StatusChoices(models.TextChoices):
+        PENDING = "pending", "Pending"
+        RUNNING = "running", "Running"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+
     animal = models.ForeignKey(
         "animals_metadata.Animal",
         on_delete=models.PROTECT,
         related_name="training_sessions",
     )
 
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.PENDING,
+    )
+
+    created_at = models.DateTimeField(
+        default=timezone.now,
+    )
+
+    started_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    completed_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
     training_date = models.DateField()
 
     bpod_file_path = models.CharField(
         max_length=500,
-        help_text="Path to the source .mesc file.",
+        help_text="Path to the source BPod .mat file.",
     )
 
     training_unit_range = models.CharField(
@@ -22,10 +49,90 @@ class TrainingSession(models.Model):
         help_text="Example: 10:21,25:55",
     )
 
+    output_plot_path = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Path to the generated average lick traces plot PNG.",
+    )
+
+    output_raster_path = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Path to the generated lick occurrences raster plot PNG.",
+    )
+
+    output_excel_path = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Path to the exported Excel licking traces file.",
+    )
+
+    output_log_path = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Path to pipeline log if available.",
+    )
+
+    metrics_json = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Calculated integrals and session summary metrics.",
+    )
+
     notes = models.TextField(
         blank=True,
         null=True,
     )
+
+    error_message = models.TextField(
+        blank=True,
+        help_text="Error message recorded if training analysis fails.",
+    )
+
+    def mark_running(self):
+        self.status = self.StatusChoices.RUNNING
+        self.started_at = timezone.now()
+        self.completed_at = None
+        self.error_message = ""
+
+        self.save(
+            update_fields=[
+                "status",
+                "started_at",
+                "completed_at",
+                "error_message",
+            ]
+        )
+
+    def mark_completed(self):
+        self.status = self.StatusChoices.COMPLETED
+        self.completed_at = timezone.now()
+        self.error_message = ""
+        self.save(
+            update_fields=[
+                "status",
+                "completed_at",
+                "output_plot_path",
+                "output_raster_path",
+                "output_excel_path",
+                "output_log_path",
+                "metrics_json",
+                "error_message",
+            ]
+        )
+
+    def mark_failed(self, error_message=""):
+        self.status = self.StatusChoices.FAILED
+        self.completed_at = timezone.now()
+        self.error_message = str(error_message)
+
+        self.save(
+            update_fields=[
+                "status",
+                "completed_at",
+                "error_message",
+            ]
+        )
 
     history = HistoricalRecords()
 

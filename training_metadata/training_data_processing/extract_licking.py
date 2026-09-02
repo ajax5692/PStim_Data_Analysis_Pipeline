@@ -354,10 +354,8 @@ def extractLicking_lickTriggeredReward(
     gw = windows.gaussian(smooth_window, std=(smooth_window - 1) / 5.0)
     gw = gw / np.sum(gw)
 
-    # Average traces and calculate integrals per trial type
+    # Average traces and calculate integrals per trial type (stimulus onset to reward onset)
     intgrStimulus = {}
-    intgrStimulus_mod = {}
-    intgrPostReward = {}
     Ylicktr_avg = {}
     maxAmpl = 0.0
 
@@ -370,13 +368,9 @@ def extractLicking_lickTriggeredReward(
                 ygf = np.convolve(y_mean, gw, mode="same")
                 Ylicktr_avg[tt] = ygf
                 intgrStimulus[tt] = _integrate_trapz(x, ygf, so, ro)
-                intgrStimulus_mod[tt] = _integrate_trapz(x, ygf, 5.0, 8.0)
-                intgrPostReward[tt] = _integrate_trapz(x, ygf, ro, ro + (ro - so))
             else:
                 Ylicktr_avg[tt] = y_mean
                 intgrStimulus[tt] = _integrate_trapz(x, y_mean, so, ro)
-                intgrStimulus_mod[tt] = _integrate_trapz(x, y_mean, 5.0, 8.0)
-                intgrPostReward[tt] = _integrate_trapz(x, y_mean, ro, ro + (ro - so))
 
             if np.max(Ylicktr_avg[tt]) > maxAmpl:
                 maxAmpl = float(np.max(Ylicktr_avg[tt]))
@@ -390,12 +384,9 @@ def extractLicking_lickTriggeredReward(
     print(f"No lick in: {nTrials - trialsWithLick} trials")
     print(f"Excluded trials: {int(np.sum(Excluded))}")
     print("-" * 60)
-    for tt in intgrStimulus_mod:
+    for tt in intgrStimulus:
         label = "go trial" if tt == 1 else "no-go trial"
-        print(f"Integral Stimulus period ({ro - so:.1f}s), {label} (type {tt}) curve: {intgrStimulus_mod[tt]:.3f}")
-    for tt in intgrPostReward:
-        label = "go trial" if tt == 1 else "no-go trial"
-        print(f"Integral After Reward period ({ro - so:.1f}s), {label} (type {tt}) curve: {intgrPostReward[tt]:.3f}")
+        print(f"Integral Stimulus period ({so:.2f}s to {ro:.2f}s), {label} (type {tt}) curve: {intgrStimulus[tt]:.3f}")
     print("=" * 60 + "\n")
 
     figs = []
@@ -521,8 +512,6 @@ def extractLicking_lickTriggeredReward(
         "Ylicktr_avg": Ylicktr_avg,
         "Excluded": Excluded,
         "intgrStimulus": intgrStimulus,
-        "intgrStimulus_mod": intgrStimulus_mod,
-        "intgrPostReward": intgrPostReward,
         "stimulus_onset": so,
         "stimulus_duration": so2,
         "reward_onset": ro,

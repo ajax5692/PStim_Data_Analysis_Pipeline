@@ -2,3 +2,5 @@ __pycache__/
 *.py[cod]
 db.sqlite3
 .env
+# Media & generated lab data
+media/
