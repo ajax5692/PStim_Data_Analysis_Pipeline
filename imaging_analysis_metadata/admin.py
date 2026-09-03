@@ -9,6 +9,8 @@ from .models import AnalysisRun, TrackChanges
 
 @admin.register(AnalysisRun)
 class AnalysisRunAdmin(SimpleHistoryAdmin):
+    list_select_related = ("imaging_session__animal",)
+
     list_display = (
         "id",
         "animal_id",

@@ -7,6 +7,8 @@ from .models import ImagingSession, TrackChanges
 
 @admin.register(ImagingSession)
 class ImagingSessionAdmin(SimpleHistoryAdmin):
+    list_select_related = ("animal",)
+
     list_display = (
         "animal",
         "acquisition_date",

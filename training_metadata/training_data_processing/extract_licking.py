@@ -1,22 +1,43 @@
 """
-Python conversion of MATLAB function extractLicking_lickTriggeredReward.m
-
 Extracts, corrects, aligns, and analyzes lick port data from Bpod SessionData files
-for lick-triggered reward protocols (Go / No-Go tasks).
+for lick-triggered reward protocols (Visual Go / No-Go tasks).
+
+Modular Python implementation of extractLicking_lickTriggeredReward.
 """
 
 import os
 import sys
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, TypedDict, Union
+
+import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
+import pandas as pd
 import scipy.io as sio
 from scipy.signal import windows
-import matplotlib.pyplot as plt
-import pandas as pd
 
 
-def _get_field(obj, field_name, default=None):
-    """Safely get a field from a mat_struct or dict."""
+class ExtractionResult(TypedDict):
+    sessionfilename: str
+    nTrials: int
+    trialsWithLick: int
+    excludedTrials: int
+    lengthOfTrial: float
+    time_axis: npt.NDArray[np.float64]
+    Ylicktr: npt.NDArray[np.float64]
+    Ylicktr_avg: Dict[int, npt.NDArray[np.float64]]
+    Excluded: npt.NDArray[np.bool_]
+    intgrStimulus: Dict[int, float]
+    stimulus_onset: float
+    stimulus_duration: float
+    reward_onset: float
+    punish_onset: float
+    figures: List[plt.Figure]
+
+
+def _get_field(obj: Any, field_name: str, default: Any = None) -> Any:
+    """Safely retrieve a field from a MATLAB struct or dictionary."""
     if obj is None:
         return default
     if isinstance(obj, dict):
@@ -26,8 +47,8 @@ def _get_field(obj, field_name, default=None):
     return default
 
 
-def _has_field(obj, field_name):
-    """Check if a field exists in a mat_struct or dict."""
+def _has_field(obj: Any, field_name: str) -> bool:
+    """Check if a field exists in a MATLAB struct or dictionary."""
     if obj is None:
         return False
     if isinstance(obj, dict):
@@ -35,31 +56,43 @@ def _has_field(obj, field_name):
     return hasattr(obj, field_name)
 
 
-def _to_1d_array(val):
-    """Ensure value is a 1D numpy array of floats."""
+def _to_1d_array(val: Any) -> npt.NDArray[np.float64]:
+    """Ensure input is converted to a 1D numpy array of floats."""
     if val is None:
-        return np.array([], dtype=float)
-    arr = np.atleast_1d(val).astype(float).flatten()
-    return arr
+        return np.array([], dtype=np.float64)
+    return np.atleast_1d(val).astype(np.float64).flatten()
 
 
-def _to_2d_array(val):
-    """Ensure value is a 2D numpy array of floats."""
+def _to_2d_array(val: Any) -> npt.NDArray[np.float64]:
+    """Ensure input is converted to a 2D numpy array of floats."""
     if val is None:
-        return np.empty((0, 0), dtype=float)
-    arr = np.atleast_2d(val).astype(float)
-    return arr
+        return np.empty((0, 0), dtype=np.float64)
+    return np.atleast_2d(val).astype(np.float64)
 
 
-def _integrate_trapz(x, y, t1, t2):
+def _integrate_trapz(
+    x: npt.NDArray[np.float64],
+    y: npt.NDArray[np.float64],
+    t1: Optional[float],
+    t2: Optional[float],
+) -> float:
     """
-    Calculate the trapezoidal integral of y(x) between x ~= t1 and x ~= t2,
-    matching MATLAB: in = trapz(x(ix1:ix2), y(ix1:ix2)).
+    Calculate the trapezoidal integral of y(x) between x ~= t1 and x ~= t2.
+    Matches MATLAB trapz(x(ix1:ix2), y(ix1:ix2)).
+
+    Args:
+        x: 1D array of time timestamps.
+        y: 1D array of signal amplitudes.
+        t1: Lower bound integration timestamp.
+        t2: Upper bound integration timestamp.
+
+    Returns:
+        Computed scalar area under the curve.
     """
     if len(x) == 0 or len(y) == 0 or t1 is None or t2 is None or t1 >= t2:
         return 0.0
-    ix1 = np.argmin(np.abs(x - t1))
-    ix2 = np.argmin(np.abs(x - t2))
+    ix1 = int(np.argmin(np.abs(x - t1)))
+    ix2 = int(np.argmin(np.abs(x - t2)))
     if ix1 > ix2:
         ix1, ix2 = ix2, ix1
     if ix1 == ix2:
@@ -67,62 +100,445 @@ def _integrate_trapz(x, y, t1, t2):
     return float(np.trapezoid(y[ix1 : ix2 + 1], x[ix1 : ix2 + 1]))
 
 
-def load_bpod_session(sessionfilename):
+def load_bpod_session(sessionfilename: Union[str, Path]) -> Any:
     """
-    Load a Bpod .mat session file and extract SessionData.
+    Load a Bpod .mat session file and extract the SessionData struct.
+
+    Args:
+        sessionfilename: Absolute or relative path to the Bpod .mat file.
+
+    Returns:
+        SessionData object parsed from MATLAB format.
+
+    Raises:
+        FileNotFoundError: If the file does not exist on disk.
+        ValueError: If MATLAB parsing fails.
+        KeyError: If SessionData key is absent.
     """
-    if not os.path.exists(sessionfilename):
-        raise FileNotFoundError(f"Session file not found: {sessionfilename}")
+    file_path = Path(sessionfilename)
+    if not file_path.exists():
+        raise FileNotFoundError(f"Session file not found: {file_path}")
 
     try:
-        mat = sio.loadmat(sessionfilename, squeeze_me=True, struct_as_record=False)
+        mat = sio.loadmat(str(file_path), squeeze_me=True, struct_as_record=False)
         if "SessionData" in mat:
             return mat["SessionData"]
     except Exception as e:
-        raise ValueError(f"Could not load SessionData from {sessionfilename}: {e}")
+        raise ValueError(f"Could not load SessionData from {file_path}: {e}")
 
     raise KeyError("SessionData struct not found in MAT file.")
 
 
-def extractLicking_lickTriggeredReward(
-    sessionfilename=None,
-    start_trial=21,
-    show_plots=True,
-    save_plots=False,
-    output_dir=None,
-    export_excel=False,
-    smooth_traces=True,
-    smooth_window=6500,
-    block_plots=True,
-):
+def determine_session_timing(
+    session_data: Any,
+    start_trial: int = 21,
+) -> Tuple[float, float, float, float, float, float, float]:
     """
-    Python implementation of extractLicking_lickTriggeredReward.m
+    Determine trial length, event onsets, and stimulus boundaries.
 
-    Parameters
-    ----------
-    sessionfilename : str or Path, optional
-        Path to the Bpod .mat session data file. If None, opens a file picker GUI.
-    start_trial : int, default=21
-        1-based trial index from which length and onset determination begins (MATLAB default: 21).
-    show_plots : bool, default=True
-        Whether to display matplotlib plot windows.
-    save_plots : bool, default=False
-        Whether to save figures as PNG/PDF files.
-    output_dir : str or Path, optional
-        Directory where exported figures and Excel files will be saved.
-    export_excel : bool, default=False
-        Whether to export downsampled licking traces to Excel (.xlsx).
-    smooth_traces : bool, default=True
-        Whether to apply Gaussian smoothing to averaged licking traces.
-    smooth_window : int, default=6500
-        Gaussian smoothing kernel size (6500 points = 0.65s at 10 kHz).
-    block_plots : bool, default=True
-        Whether to keep matplotlib plot windows open on screen.
+    Args:
+        session_data: The Bpod SessionData object.
+        start_trial: 1-indexed trial number to start parsing baseline timing.
 
-    Returns
-    -------
-    dict
-        Contains computed results, arrays, integrals, and figures.
+    Returns:
+        Tuple of (lengthOfTrial, so, so2, ro, po, visStimStart, visStimEnd).
+    """
+    n_trials = int(session_data.nTrials)
+    length_of_trial = 0.0
+    ro = 0.0
+    po = 0.0
+    so = 0.0
+    so2 = 0.0
+
+    start_idx = max(0, min(start_trial - 1, n_trials - 1))
+
+    for i in range(start_idx, n_trials):
+        trial = session_data.RawEvents.Trial[i]
+        states = trial.States
+        events = trial.Events
+
+        if _has_field(states, "WaitingForTrigger_Start"):
+            wfts = _to_1d_array(_get_field(states, "WaitingForTrigger_Start"))
+            lag_init = float(wfts[1]) if len(wfts) > 1 else 0.0
+        elif _has_field(states, "WaitingForTrigger"):
+            wft = _to_1d_array(_get_field(states, "WaitingForTrigger"))
+            lag_init = float(wft[1]) if len(wft) > 1 else 0.0
+        elif _has_field(states, "InitialDelay"):
+            init_delay = _to_2d_array(_get_field(states, "InitialDelay"))
+            lag_init = float(init_delay[-1, 0]) if init_delay.size > 0 else 0.0
+        else:
+            lag_init = 0.0
+
+        tup = _to_1d_array(_get_field(events, "Tup"))
+        cur_trial_len = (tup[-1] - lag_init) if len(tup) > 0 else 0.0
+        if length_of_trial < cur_trial_len:
+            length_of_trial = cur_trial_len
+
+        if _has_field(states, "DeliverReward"):
+            rew = _to_1d_array(_get_field(states, "DeliverReward"))
+            if len(rew) > 0 and not np.isnan(rew[0]):
+                ro = round(float(rew[0] - lag_init), 2)
+
+        if _has_field(states, "DeliverPunish"):
+            pun = _to_1d_array(_get_field(states, "DeliverPunish"))
+            if len(pun) > 0 and not np.isnan(pun[0]):
+                po = round(float(pun[0] - lag_init), 2)
+
+        if _has_field(states, "SummonVideo"):
+            sv = _to_1d_array(_get_field(states, "SummonVideo"))
+            if len(sv) > 0 and not np.isnan(sv[0]):
+                so = round(float(sv[0] - lag_init), 2)
+                so2 = round(float(sv[1] - sv[0]), 2) if len(sv) > 1 else 0.0
+        elif _has_field(states, "DeliverStimulus"):
+            ds = _to_1d_array(_get_field(states, "DeliverStimulus"))
+            if len(ds) > 0 and not np.isnan(ds[0]):
+                so = round(float(ds[0] - lag_init), 2)
+
+    if so > 0:
+        vis_stim_start = so
+        vis_stim_end = so + (so2 if so2 > 0 else 3.0)
+    else:
+        vis_stim_start = 3.55
+        vis_stim_end = 6.55
+
+    return length_of_trial, so, so2, ro, po, vis_stim_start, vis_stim_end
+
+
+def extract_trial_lick_matrix(
+    session_data: Any,
+    time_axis: npt.NDArray[np.float64],
+) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.bool_], int, Dict[int, npt.NDArray[np.float64]]]:
+    """
+    Extract individual lick event timestamps and populate the high-resolution binary matrix.
+
+    Args:
+        session_data: Bpod SessionData object.
+        time_axis: 1D array of 0.1ms time increments.
+
+    Returns:
+        Tuple of (Ylicktr, Excluded, trialsWithLick, trial_lick_events).
+    """
+    n_trials = int(session_data.nTrials)
+    y_lick_matrix = np.zeros((n_trials, len(time_axis)), dtype=np.float64)
+    excluded = np.zeros(n_trials, dtype=bool)
+    trials_with_lick = 0
+    trial_lick_events: Dict[int, npt.NDArray[np.float64]] = {}
+
+    for i in range(n_trials):
+        trial = session_data.RawEvents.Trial[i]
+        states = trial.States
+        events = trial.Events
+
+        if _has_field(states, "WaitingForTrigger_Start"):
+            wfts = _to_1d_array(_get_field(states, "WaitingForTrigger_Start"))
+            trial_lag = float(wfts[1]) if len(wfts) > 1 else 0.0
+            end_of_trial = _to_1d_array(_get_field(states, "StillDrinking"))
+            if len(end_of_trial) == 0:
+                end_of_trial = _to_1d_array(_get_field(states, "ITI"))
+        elif _has_field(states, "WaitingForTrigger"):
+            wft = _to_1d_array(_get_field(states, "WaitingForTrigger"))
+            trial_lag = float(wft[1]) if len(wft) > 1 else 0.0
+            end_of_trial = _to_1d_array(_get_field(states, "StillDrinking"))
+            if len(end_of_trial) == 0:
+                end_of_trial = _to_1d_array(_get_field(states, "ITI"))
+        elif _has_field(states, "InitialDelay"):
+            init_delay = _to_2d_array(_get_field(states, "InitialDelay"))
+            trial_lag = float(init_delay[-1, 0]) if init_delay.size > 0 else 0.0
+            end_of_trial = _to_1d_array(_get_field(states, "ITI"))
+            if len(end_of_trial) == 0:
+                end_of_trial = _to_1d_array(_get_field(states, "StillDrinking"))
+        else:
+            trial_lag = 0.0
+            end_of_trial = np.array([0.0, 0.0], dtype=np.float64)
+
+        if not _has_field(events, "Port1In"):
+            continue
+
+        port_in = list(_to_1d_array(_get_field(events, "Port1In")))
+        if len(port_in) == 0:
+            continue
+
+        trials_with_lick += 1
+
+        if _has_field(events, "Port1Out"):
+            port_out = list(_to_1d_array(_get_field(events, "Port1Out")))
+        else:
+            if len(port_in) == 1 and len(end_of_trial) > 0 and port_in[0] >= end_of_trial[0]:
+                port_out = [float(end_of_trial[-1])]
+            else:
+                excluded[i] = True
+                continue
+
+        corr_one_needed = False
+        if len(port_in) > 0 and len(port_out) > 0 and port_in[0] > port_out[0]:
+            if len(port_out) > 1:
+                port_out.pop(0)
+            elif len(port_out) == 1:
+                corr_one_needed = True
+
+        if len(port_in) > 0 and len(port_out) > 0 and port_in[-1] > port_out[-1]:
+            if len(end_of_trial) > 0:
+                port_out.append(float(end_of_trial[-1]))
+
+        if corr_one_needed and len(port_out) > 0:
+            port_out.pop(0)
+
+        if len(port_in) != len(port_out) or len(port_in) == 0:
+            excluded[i] = True
+            continue
+
+        if not all(p_in < p_out for p_in, p_out in zip(port_in, port_out)):
+            excluded[i] = True
+            continue
+
+        licks = np.array(port_in, dtype=np.float64) - trial_lag
+        licks_out = np.array(port_out, dtype=np.float64) - trial_lag
+
+        valid_mask = licks >= 0
+        licks = licks[valid_mask]
+        licks_out = licks_out[valid_mask]
+
+        if len(licks) == 0:
+            trials_with_lick -= 1
+            continue
+
+        trial_lick_events[i] = licks
+
+        y = np.zeros(len(time_axis), dtype=np.float64)
+        for k in range(len(licks)):
+            i1 = int(np.round(licks[k] * 1e4))
+            i2 = int(np.round(licks_out[k] * 1e4))
+            i1 = max(0, min(i1, len(time_axis) - 1))
+            i2 = max(0, min(i2, len(time_axis) - 1))
+            if i2 >= i1:
+                y[i1 : i2 + 1] = 1.0
+
+        y_lick_matrix[i, :] = y
+
+    return y_lick_matrix, excluded, trials_with_lick, trial_lick_events
+
+
+def compute_smoothed_averages_and_integrals(
+    y_lick_matrix: npt.NDArray[np.float64],
+    trial_types_raw: npt.NDArray[np.int_],
+    excluded: npt.NDArray[np.bool_],
+    max_trial_type: int,
+    time_axis: npt.NDArray[np.float64],
+    smooth_traces: bool,
+    smooth_window: int,
+    so: float,
+    ro: float,
+) -> Tuple[Dict[int, npt.NDArray[np.float64]], Dict[int, float], float]:
+    """
+    Compute trial-averaged lick envelopes, apply Gaussian convolution, and calculate stimulus integrals.
+
+    Returns:
+        Tuple of (Ylicktr_avg, intgrStimulus, maxAmpl).
+    """
+    gw = windows.gaussian(smooth_window, std=(smooth_window - 1) / 5.0)
+    gw = gw / np.sum(gw)
+
+    intgr_stimulus: Dict[int, float] = {}
+    y_lick_avg: Dict[int, npt.NDArray[np.float64]] = {}
+    max_ampl = 0.0
+
+    for tt in range(1, max_trial_type + 1):
+        type_mask = (trial_types_raw == tt) & (~excluded)
+        if np.any(type_mask):
+            subset = y_lick_matrix[type_mask, :]
+            y_mean = np.mean(subset, axis=0) if subset.shape[0] > 1 else subset[0, :]
+            if smooth_traces:
+                ygf = np.convolve(y_mean, gw, mode="same")
+                y_lick_avg[tt] = ygf
+                intgr_stimulus[tt] = _integrate_trapz(time_axis, ygf, so, ro)
+            else:
+                y_lick_avg[tt] = y_mean
+                intgr_stimulus[tt] = _integrate_trapz(time_axis, y_mean, so, ro)
+
+            if np.max(y_lick_avg[tt]) > max_ampl:
+                max_ampl = float(np.max(y_lick_avg[tt]))
+
+    return y_lick_avg, intgr_stimulus, max_ampl
+
+
+def generate_lick_figures(
+    sessionfilename: str,
+    time_axis: npt.NDArray[np.float64],
+    length_of_trial: float,
+    n_trials: int,
+    trial_types_raw: npt.NDArray[np.int_],
+    excluded: npt.NDArray[np.bool_],
+    trial_lick_events: Dict[int, npt.NDArray[np.float64]],
+    y_lick_avg: Dict[int, npt.NDArray[np.float64]],
+    max_trial_type: int,
+    max_ampl: float,
+    vis_stim_start: float,
+    vis_stim_end: float,
+    so: float,
+    ro: float,
+    po: float,
+    save_plots: bool,
+    output_dir: Optional[Union[str, Path]],
+    show_plots: bool,
+    block_plots: bool,
+) -> List[plt.Figure]:
+    """
+    Render and optionally save raster plot and average licking trace figures.
+    """
+    figs: List[plt.Figure] = []
+    filename_base = os.path.basename(sessionfilename)
+
+    # Color palette
+    tp = np.array([
+        [0.0, 0.4, 0.2],    # Go - Dark Green
+        [0.85, 0.2, 0.15],  # No-Go - Red
+    ])
+    if max_trial_type > 2:
+        extra_colors = plt.cm.tab10(np.linspace(0, 1, max_trial_type))[:, :3]
+        tp = np.vstack([tp, extra_colors[2:]])
+
+    # FIGURE 1: Raster Plot
+    fig1, ax1 = plt.subplots(figsize=(10, 6))
+    if hasattr(fig1.canvas, "manager") and fig1.canvas.manager:
+        fig1.canvas.manager.set_window_title(f"licks occurrence file: {filename_base}")
+
+    ax1.axvspan(vis_stim_start, vis_stim_end, color="#cccccc", alpha=0.8, label="Video", zorder=0)
+    if ro > 0:
+        ax1.axvline(ro, color="#777777", linestyle="--", linewidth=1.5, label="Reward", zorder=1)
+    if po > 0:
+        ax1.axvline(po, color="darkgray", linestyle="--", linewidth=1.5, label="Punishment", zorder=1)
+
+    lgnd_plotted = set()
+    for i in range(n_trials):
+        if i in trial_lick_events and not excluded[i]:
+            tt = trial_types_raw[i]
+            color = tp[tt - 1] if tt <= len(tp) else "blue"
+            label = ("Go trials" if tt == 1 else "NoGo trials") if tt not in lgnd_plotted else None
+            if label:
+                lgnd_plotted.add(tt)
+            ax1.vlines(trial_lick_events[i], ymin=0, ymax=1, color=color, linewidth=1.2, label=label, zorder=2)
+
+    ax1.set_ylim(0, 3)
+    ax1.set_xlim(0, max(length_of_trial, 1.0))
+    ax1.set_ylabel("Licking", fontsize=11)
+    ax1.set_xlabel("Time (s)", fontsize=11)
+    clean_stem = Path(sessionfilename).stem.replace("_", " ")
+    ax1.set_title(f"Lick Occurrences - {clean_stem}", fontsize=12, fontweight="bold")
+    ax1.legend(loc="upper right", frameon=False, fontsize=10)
+    ax1.spines["top"].set_visible(False)
+    ax1.spines["right"].set_visible(False)
+    ax1.tick_params(direction="out")
+    figs.append(fig1)
+
+    # FIGURE 2: Averaged Licking Traces
+    fig2, ax2 = plt.subplots(figsize=(10, 6))
+    if hasattr(fig2.canvas, "manager") and fig2.canvas.manager:
+        fig2.canvas.manager.set_window_title(f"licks traces file: {filename_base}")
+
+    color_go = "#006837"
+    color_nogo = "#d73027"
+    n_go = int(np.sum((trial_types_raw == 1) & (~excluded)))
+    n_nogo = int(np.sum((trial_types_raw == 2) & (~excluded)))
+
+    ax2.axvspan(vis_stim_start, vis_stim_end, color="#cccccc", alpha=0.8, label="Video", zorder=0)
+    if ro > 0:
+        ax2.axvline(ro, color="#777777", linestyle="--", linewidth=1.5, label="Reward", zorder=1)
+    if po > 0:
+        ax2.axvline(po, color="darkgray", linestyle="--", linewidth=1.5, label="Punishment", zorder=1)
+
+    if 1 in y_lick_avg:
+        ax2.plot(time_axis, y_lick_avg[1], color=color_go, linewidth=2.0, label=f"Go trials (={n_go})", zorder=3)
+    if 2 in y_lick_avg:
+        ax2.plot(time_axis, y_lick_avg[2], color=color_nogo, linewidth=2.0, label=f"NoGo trials (={n_nogo})", zorder=3)
+
+    for tt in range(3, max_trial_type + 1):
+        if tt in y_lick_avg:
+            ax2.plot(time_axis, y_lick_avg[tt], linewidth=2.0, label=f"Trial type {tt}", zorder=3)
+
+    x_max_view = 20.0 if length_of_trial >= 18.0 else max(length_of_trial, 1.0)
+    ax2.set_xlim(0, x_max_view)
+    ax2.set_xticks(np.arange(0, x_max_view + 1, 5))
+
+    y_max_view = 0.30 if max_ampl <= 0.295 else float(np.ceil(max_ampl * 10) / 10)
+    ax2.set_ylim(0, y_max_view)
+    ax2.set_yticks(np.arange(0, y_max_view + 0.01, 0.05))
+
+    ax2.set_ylabel("Licking", fontsize=11)
+    ax2.set_xlabel("Time (s)", fontsize=11)
+    ax2.set_title(f"Average licking trace - {clean_stem}", fontsize=12, fontweight="bold")
+    ax2.legend(loc="upper right", frameon=False, fontsize=10)
+    ax2.spines["top"].set_visible(False)
+    ax2.spines["right"].set_visible(False)
+    ax2.tick_params(direction="out")
+    figs.append(fig2)
+
+    if save_plots and output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        stem = Path(sessionfilename).stem
+        fig1.savefig(os.path.join(output_dir, f"{stem}_lick_occurrence.png"), dpi=300, bbox_inches="tight")
+        fig2.savefig(os.path.join(output_dir, f"{stem}_lick_traces.png"), dpi=300, bbox_inches="tight")
+
+    if show_plots:
+        plt.show(block=block_plots)
+
+    return figs
+
+
+def export_licking_traces_excel(
+    sessionfilename: str,
+    time_axis: npt.NDArray[np.float64],
+    y_lick_matrix: npt.NDArray[np.float64],
+    n_trials: int,
+    output_dir: Optional[Union[str, Path]] = None,
+    step: int = 500,
+) -> Path:
+    """
+    Export downsampled trial-by-trial licking arrays to Excel (.xlsx).
+    """
+    target_dir = Path(output_dir) if output_dir else Path(sessionfilename).parent
+    target_dir.mkdir(parents=True, exist_ok=True)
+    xls_path = target_dir / f"Individual_licking_traces_{Path(sessionfilename).stem}.xlsx"
+
+    x_down = time_axis[::step]
+    y_down = y_lick_matrix[:, ::step]
+
+    data_dict: Dict[str, Any] = {"t": x_down}
+    for i in range(n_trials):
+        data_dict[f"Trial_{i+1}"] = y_down[i, :]
+
+    df_export = pd.DataFrame(data_dict)
+    df_export.to_excel(xls_path, index=False)
+    print(f"Licking data exported to: {xls_path}")
+    return xls_path
+
+
+def extractLicking_lickTriggeredReward(
+    sessionfilename: Optional[Union[str, Path]] = None,
+    start_trial: int = 21,
+    show_plots: bool = True,
+    save_plots: bool = False,
+    output_dir: Optional[Union[str, Path]] = None,
+    export_excel: bool = False,
+    smooth_traces: bool = True,
+    smooth_window: int = 6500,
+    block_plots: bool = True,
+) -> Optional[ExtractionResult]:
+    """
+    Extract, align, smooth, and analyze licking kinematics from a Bpod session file.
+
+    Args:
+        sessionfilename: Path to the .mat Bpod session file.
+        start_trial: Trial index from which to evaluate length and onsets (default: 21).
+        show_plots: Display interactive matplotlib plot windows.
+        save_plots: Save high-resolution PNG plots to output_dir.
+        output_dir: Destination folder for plots and Excel exports.
+        export_excel: Export downsampled licking matrices to .xlsx.
+        smooth_traces: Apply Gaussian convolution to averaged licking traces.
+        smooth_window: Gaussian smoothing kernel size in time steps (default: 6500 = 0.65s).
+        block_plots: Keep matplotlib windows open interactively.
+
+    Returns:
+        ExtractionResult dictionary containing summary metrics, traces, and figures.
     """
     if sessionfilename is None:
         try:
@@ -143,375 +559,99 @@ def extractLicking_lickTriggeredReward(
         print("No file selected.")
         return None
 
-    sessionfilename = str(sessionfilename)
-    SessionData = load_bpod_session(sessionfilename)
+    sessionfilename_str = str(sessionfilename)
+    session_data = load_bpod_session(sessionfilename_str)
 
-    nTrials = int(SessionData.nTrials)
-    trial_types_raw = _to_1d_array(SessionData.TrialTypes).astype(int)
+    n_trials = int(session_data.nTrials)
+    trial_types_raw = _to_1d_array(session_data.TrialTypes).astype(int)
     max_trial_type = int(np.max(trial_types_raw)) if len(trial_types_raw) > 0 else 1
 
-    # Colors for raster plot
-    tp = np.array([
-        [0.0, 0.4, 0.2],  # Dark green - Go trial
-        [0.85, 0.2, 0.15],  # Red - No-Go trial
-    ])
-    if max_trial_type > 2:
-        extra_colors = plt.cm.tab10(np.linspace(0, 1, max_trial_type))[:, :3]
-        tp = np.vstack([tp, extra_colors[2:]])
+    (
+        length_of_trial,
+        so,
+        so2,
+        ro,
+        po,
+        vis_stim_start,
+        vis_stim_end,
+    ) = determine_session_timing(session_data, start_trial=start_trial)
 
-    lengthOfTrial = 0.0
-    ro = 0.0  # reward onset
-    po = 0.0  # punishment onset
-    so = 0.0  # stim onset
-    so2 = 0.0  # stim off / duration
-    fileType = 1
-
-    # Start index in 0-based indexing (MATLAB `for i=21:SessionData.nTrials`)
-    start_idx = max(0, min(start_trial - 1, nTrials - 1))
-
-    # PASS 1: Determine trial lengths and event onsets starting from start_trial
-    for i in range(start_idx, nTrials):
-        trial = SessionData.RawEvents.Trial[i]
-        states = trial.States
-        events = trial.Events
-
-        # Prioritize WaitingForTrigger_Start (measurement sessions) over InitialDelay
-        if _has_field(states, "WaitingForTrigger_Start"):
-            wfts = _to_1d_array(_get_field(states, "WaitingForTrigger_Start"))
-            lagInit = float(wfts[1]) if len(wfts) > 1 else 0.0
-            fileType = 2
-        elif _has_field(states, "WaitingForTrigger"):
-            wft = _to_1d_array(_get_field(states, "WaitingForTrigger"))
-            lagInit = float(wft[1]) if len(wft) > 1 else 0.0
-            fileType = 3
-        elif _has_field(states, "InitialDelay"):
-            init_delay = _to_2d_array(_get_field(states, "InitialDelay"))
-            lagInit = float(init_delay[-1, 0]) if init_delay.size > 0 else 0.0
-            fileType = 1
-        else:
-            lagInit = 0.0
-
-        tup = _to_1d_array(_get_field(events, "Tup"))
-        curTrialLength = (tup[-1] - lagInit) if len(tup) > 0 else 0.0
-        if lengthOfTrial < curTrialLength:
-            lengthOfTrial = curTrialLength
-
-        # Reward onset
-        if _has_field(states, "DeliverReward"):
-            rew = _to_1d_array(_get_field(states, "DeliverReward"))
-            if len(rew) > 0 and not np.isnan(rew[0]):
-                calc_ro = round(float(rew[0] - lagInit), 2)
-                if ro != 0.0 and ro != calc_ro:
-                    print(f"Reward onset differs across trials (trial {i+1}): {ro} vs {calc_ro}")
-                ro = calc_ro
-
-        # Punishment onset
-        if _has_field(states, "DeliverPunish"):
-            pun = _to_1d_array(_get_field(states, "DeliverPunish"))
-            if len(pun) > 0 and not np.isnan(pun[0]):
-                calc_po = round(float(pun[0] - lagInit), 2)
-                if po != 0.0 and po != calc_po:
-                    print(f"Punishment onset differs across trials (trial {i+1}): {po} vs {calc_po}")
-                po = calc_po
-
-        # Stimulus period
-        if _has_field(states, "SummonVideo"):
-            sv = _to_1d_array(_get_field(states, "SummonVideo"))
-            if len(sv) > 0 and not np.isnan(sv[0]):
-                calc_so = round(float(sv[0] - lagInit), 2)
-                calc_so2 = round(float(sv[1] - sv[0]), 2) if len(sv) > 1 else 0.0
-                if so != 0.0 and so != calc_so:
-                    print(f"Stimulus onset differs across trials (trial {i+1}): {so} vs {calc_so}")
-                if so2 != 0.0 and so2 != calc_so2:
-                    print(f"Stimulus duration differs across trials (trial {i+1}): {so2} vs {calc_so2}")
-                so = calc_so
-                so2 = calc_so2
-        elif _has_field(states, "DeliverStimulus"):
-            ds = _to_1d_array(_get_field(states, "DeliverStimulus"))
-            if len(ds) > 0 and not np.isnan(ds[0]):
-                calc_so = round(float(ds[0] - lagInit), 2)
-                if so != 0.0 and so != calc_so:
-                    print(f"Stimulus delivery differs across trials (trial {i+1}): {so} vs {calc_so}")
-                so = calc_so
-
-    # Visual stimulus onset/offset relative to trial start
-    if so > 0:
-        visStimStart = so
-        visStimEnd = so + (so2 if so2 > 0 else 3.0)
-    else:
-        visStimStart = 3.55
-        visStimEnd = 6.55
-
-    # Time axis: 0.1ms resolution
     dt = 0.0001
-    x = np.arange(0, lengthOfTrial + dt, dt)
-    Ylicktr = np.zeros((nTrials, len(x)), dtype=float)
-    Excluded = np.zeros(nTrials, dtype=bool)
-    trialsWithLick = 0
-    trial_lick_events = {}
+    x = np.arange(0, length_of_trial + dt, dt, dtype=np.float64)
 
-    # PASS 2: Extracting licking data across all trials
-    for i in range(nTrials):
-        trial = SessionData.RawEvents.Trial[i]
-        states = trial.States
-        events = trial.Events
+    y_lick_matrix, excluded, trials_with_lick, trial_lick_events = extract_trial_lick_matrix(
+        session_data, x
+    )
 
-        # Extract per-trial lag offset and end of trial
-        if _has_field(states, "WaitingForTrigger_Start"):
-            wfts = _to_1d_array(_get_field(states, "WaitingForTrigger_Start"))
-            trial_lag = float(wfts[1]) if len(wfts) > 1 else 0.0
-            endOfTrial = _to_1d_array(_get_field(states, "StillDrinking"))
-            if len(endOfTrial) == 0:
-                endOfTrial = _to_1d_array(_get_field(states, "ITI"))
-        elif _has_field(states, "WaitingForTrigger"):
-            wft = _to_1d_array(_get_field(states, "WaitingForTrigger"))
-            trial_lag = float(wft[1]) if len(wft) > 1 else 0.0
-            endOfTrial = _to_1d_array(_get_field(states, "StillDrinking"))
-            if len(endOfTrial) == 0:
-                endOfTrial = _to_1d_array(_get_field(states, "ITI"))
-        elif _has_field(states, "InitialDelay"):
-            init_delay = _to_2d_array(_get_field(states, "InitialDelay"))
-            trial_lag = float(init_delay[-1, 0]) if init_delay.size > 0 else 0.0
-            endOfTrial = _to_1d_array(_get_field(states, "ITI"))
-            if len(endOfTrial) == 0:
-                endOfTrial = _to_1d_array(_get_field(states, "StillDrinking"))
-        else:
-            trial_lag = 0.0
-            endOfTrial = np.array([0.0, 0.0])
+    y_lick_avg, intgr_stimulus, max_ampl = compute_smoothed_averages_and_integrals(
+        y_lick_matrix=y_lick_matrix,
+        trial_types_raw=trial_types_raw,
+        excluded=excluded,
+        max_trial_type=max_trial_type,
+        time_axis=x,
+        smooth_traces=smooth_traces,
+        smooth_window=smooth_window,
+        so=so,
+        ro=ro,
+    )
 
-        if not _has_field(events, "Port1In"):
-            continue
-
-        PortIn = list(_to_1d_array(_get_field(events, "Port1In")))
-        if len(PortIn) == 0:
-            continue
-
-        trialsWithLick += 1
-
-        if _has_field(events, "Port1Out"):
-            PortOut = list(_to_1d_array(_get_field(events, "Port1Out")))
-        else:
-            # Correction Case 2.1
-            if len(PortIn) == 1 and len(endOfTrial) > 0 and PortIn[0] >= endOfTrial[0]:
-                PortOut = [float(endOfTrial[-1])]
-            else:
-                Excluded[i] = True
-                continue
-
-        # Correction Case 1: Lick started before or at trial boundary
-        corrOneNeeded = False
-        if len(PortIn) > 0 and len(PortOut) > 0 and PortIn[0] > PortOut[0]:
-            if len(PortOut) - 1 > 0:
-                PortOut.pop(0)
-            elif len(PortOut) - 1 == 0:
-                corrOneNeeded = True
-
-        # Correction Case 2: Lick ended after trial boundary (use final timestamp of StillDrinking/ITI)
-        if len(PortIn) > 0 and len(PortOut) > 0 and PortIn[-1] > PortOut[-1]:
-            if len(endOfTrial) > 0:
-                PortOut.append(float(endOfTrial[-1]))
-
-        if corrOneNeeded and len(PortOut) > 0:
-            PortOut.pop(0)
-
-        # Consistency checks
-        if len(PortIn) != len(PortOut) or len(PortIn) == 0:
-            Excluded[i] = True
-            continue
-
-        if not all(p_in < p_out for p_in, p_out in zip(PortIn, PortOut)):
-            Excluded[i] = True
-            continue
-
-        licks = np.array(PortIn, dtype=float)
-        licksOUT = np.array(PortOut, dtype=float)
-
-        # Align licks with trial start (subtract trial_lag offset)
-        licks = licks - trial_lag
-        licksOUT = licksOUT - trial_lag
-
-        valid_mask = licks >= 0
-        licks = licks[valid_mask]
-        licksOUT = licksOUT[valid_mask]
-
-        if len(licks) == 0:
-            trialsWithLick -= 1
-            continue
-
-        trial_lick_events[i] = licks
-
-        y = np.zeros(len(x), dtype=float)
-        for k in range(len(licks)):
-            i1 = int(np.round(licks[k] * 1e4))
-            i2 = int(np.round(licksOUT[k] * 1e4))
-            i1 = max(0, min(i1, len(x) - 1))
-            i2 = max(0, min(i2, len(x) - 1))
-            if i2 >= i1:
-                y[i1 : i2 + 1] = 1.0
-        Ylicktr[i, :] = y
-
-    # Gaussian Smoothing Kernel
-    gw = windows.gaussian(smooth_window, std=(smooth_window - 1) / 5.0)
-    gw = gw / np.sum(gw)
-
-    # Average traces and calculate integrals per trial type (stimulus onset to reward onset)
-    intgrStimulus = {}
-    Ylicktr_avg = {}
-    maxAmpl = 0.0
-
-    for tt in range(1, max_trial_type + 1):
-        type_mask = (trial_types_raw == tt) & (~Excluded)
-        if np.any(type_mask):
-            subset = Ylicktr[type_mask, :]
-            y_mean = np.mean(subset, axis=0) if subset.shape[0] > 1 else subset[0, :]
-            if smooth_traces:
-                ygf = np.convolve(y_mean, gw, mode="same")
-                Ylicktr_avg[tt] = ygf
-                intgrStimulus[tt] = _integrate_trapz(x, ygf, so, ro)
-            else:
-                Ylicktr_avg[tt] = y_mean
-                intgrStimulus[tt] = _integrate_trapz(x, y_mean, so, ro)
-
-            if np.max(Ylicktr_avg[tt]) > maxAmpl:
-                maxAmpl = float(np.max(Ylicktr_avg[tt]))
-
-    # Console summary matching MATLAB format
-    filename_base = os.path.basename(sessionfilename)
+    filename_base = os.path.basename(sessionfilename_str)
     print("\n" + "=" * 60)
     print(f"File: {filename_base}")
-    print(f"Number of trials: {nTrials} trials")
-    print(f"Licked in: {trialsWithLick - int(np.sum(Excluded))} trials")
-    print(f"No lick in: {nTrials - trialsWithLick} trials")
-    print(f"Excluded trials: {int(np.sum(Excluded))}")
+    print(f"Number of trials: {n_trials} trials")
+    print(f"Licked in: {trials_with_lick - int(np.sum(excluded))} trials")
+    print(f"No lick in: {n_trials - trials_with_lick} trials")
+    print(f"Excluded trials: {int(np.sum(excluded))}")
     print("-" * 60)
-    for tt in intgrStimulus:
+    for tt in intgr_stimulus:
         label = "go trial" if tt == 1 else "no-go trial"
-        print(f"Integral Stimulus period ({so:.2f}s to {ro:.2f}s), {label} (type {tt}) curve: {intgrStimulus[tt]:.3f}")
+        print(f"Integral Stimulus period ({so:.2f}s to {ro:.2f}s), {label} (type {tt}) curve: {intgr_stimulus[tt]:.3f}")
     print("=" * 60 + "\n")
 
-    figs = []
-
+    figs: List[plt.Figure] = []
     if show_plots or save_plots:
-        # FIGURE 1: Individual lick occurrences / Raster Plot
-        fig1, ax1 = plt.subplots(figsize=(10, 6))
-        if hasattr(fig1.canvas, "manager") and fig1.canvas.manager:
-            fig1.canvas.manager.set_window_title(f"licks occurrence file: {filename_base}")
+        figs = generate_lick_figures(
+            sessionfilename=sessionfilename_str,
+            time_axis=x,
+            length_of_trial=length_of_trial,
+            n_trials=n_trials,
+            trial_types_raw=trial_types_raw,
+            excluded=excluded,
+            trial_lick_events=trial_lick_events,
+            y_lick_avg=y_lick_avg,
+            max_trial_type=max_trial_type,
+            max_ampl=max_ampl,
+            vis_stim_start=vis_stim_start,
+            vis_stim_end=vis_stim_end,
+            so=so,
+            ro=ro,
+            po=po,
+            save_plots=save_plots,
+            output_dir=output_dir,
+            show_plots=show_plots,
+            block_plots=block_plots,
+        )
 
-        # Visual Stimulus span
-        ax1.axvspan(visStimStart, visStimEnd, color="#cccccc", alpha=0.8, label="Video", zorder=0)
-
-        if ro > 0:
-            ax1.axvline(ro, color="#777777", linestyle="--", linewidth=1.5, label="Reward", zorder=1)
-        if po > 0:
-            ax1.axvline(po, color="darkgray", linestyle="--", linewidth=1.5, label="Punishment", zorder=1)
-
-        lgnd_plotted = set()
-        for i in range(nTrials):
-            if i in trial_lick_events and not Excluded[i]:
-                tt = trial_types_raw[i]
-                color = tp[tt - 1] if tt <= len(tp) else "blue"
-                label = ("Go trials" if tt == 1 else "NoGo trials") if tt not in lgnd_plotted else None
-                if label:
-                    lgnd_plotted.add(tt)
-                ax1.vlines(trial_lick_events[i], ymin=0, ymax=1, color=color, linewidth=1.2, label=label, zorder=2)
-
-        ax1.set_ylim(0, 3)
-        ax1.set_xlim(0, max(lengthOfTrial, 1.0))
-        ax1.set_ylabel("Licking", fontsize=11)
-        ax1.set_xlabel("Time (s)", fontsize=11)
-        clean_stem = Path(sessionfilename).stem.replace("_", " ")
-        ax1.set_title(f"Lick Occurrences - {clean_stem}", fontsize=12, fontweight="bold")
-        ax1.legend(loc="upper right", frameon=False, fontsize=10)
-        ax1.spines["top"].set_visible(False)
-        ax1.spines["right"].set_visible(False)
-        ax1.tick_params(direction="out")
-        figs.append(fig1)
-
-        # FIGURE 2: Averaged Licking Traces (Styled to match publication reference)
-        fig2, ax2 = plt.subplots(figsize=(10, 6))
-        if hasattr(fig2.canvas, "manager") and fig2.canvas.manager:
-            fig2.canvas.manager.set_window_title(f"licks traces file: {filename_base}")
-
-        color_go = "#006837"    # Dark Green matching reference
-        color_nogo = "#d73027"  # Crimson Red matching reference
-
-        n_go = int(np.sum((trial_types_raw == 1) & (~Excluded)))
-        n_nogo = int(np.sum((trial_types_raw == 2) & (~Excluded)))
-
-        # Visual Stimulus span & Reward line
-        ax2.axvspan(visStimStart, visStimEnd, color="#cccccc", alpha=0.8, label="Video", zorder=0)
-        if ro > 0:
-            ax2.axvline(ro, color="#777777", linestyle="--", linewidth=1.5, label="Reward", zorder=1)
-        if po > 0:
-            ax2.axvline(po, color="darkgray", linestyle="--", linewidth=1.5, label="Punishment", zorder=1)
-
-        # Plot averaged traces
-        if 1 in Ylicktr_avg:
-            ax2.plot(x, Ylicktr_avg[1], color=color_go, linewidth=2.0, label=f"Go trials (={n_go})", zorder=3)
-        if 2 in Ylicktr_avg:
-            ax2.plot(x, Ylicktr_avg[2], color=color_nogo, linewidth=2.0, label=f"NoGo trials (={n_nogo})", zorder=3)
-
-        for tt in range(3, max_trial_type + 1):
-            if tt in Ylicktr_avg:
-                ax2.plot(x, Ylicktr_avg[tt], linewidth=2.0, label=f"Trial type {tt}", zorder=3)
-
-        # Exact matching axes limits and ticks
-        x_max_view = 20.0 if lengthOfTrial >= 18.0 else max(lengthOfTrial, 1.0)
-        ax2.set_xlim(0, x_max_view)
-        ax2.set_xticks(np.arange(0, x_max_view + 1, 5))
-
-        y_max_view = 0.30 if maxAmpl <= 0.295 else float(np.ceil(maxAmpl * 10) / 10)
-        ax2.set_ylim(0, y_max_view)
-        ax2.set_yticks(np.arange(0, y_max_view + 0.01, 0.05))
-
-        ax2.set_ylabel("Licking", fontsize=11)
-        ax2.set_xlabel("Time (s)", fontsize=11)
-        clean_name = Path(sessionfilename).stem.replace("_", " ")
-        ax2.set_title(f"Average licking trace - {clean_name}", fontsize=12, fontweight="bold")
-        ax2.legend(loc="upper right", frameon=False, fontsize=10)
-        ax2.spines["top"].set_visible(False)
-        ax2.spines["right"].set_visible(False)
-        ax2.tick_params(direction="out")
-        figs.append(fig2)
-
-        if save_plots and output_dir:
-            os.makedirs(output_dir, exist_ok=True)
-            stem = Path(sessionfilename).stem
-            fig1.savefig(os.path.join(output_dir, f"{stem}_lick_occurrence.png"), dpi=300, bbox_inches="tight")
-            fig2.savefig(os.path.join(output_dir, f"{stem}_lick_traces.png"), dpi=300, bbox_inches="tight")
-
-        if show_plots:
-            plt.show(block=block_plots)
-
-    # Optional Excel Export
     if export_excel:
-        target_dir = output_dir if output_dir else os.path.dirname(sessionfilename)
-        xls_name = f"Individual_licking_traces_{Path(sessionfilename).stem}.xlsx"
-        xls_path = os.path.join(target_dir, xls_name)
-
-        step = 500
-        x_down = x[::step]
-        Y_down = Ylicktr[:, ::step]
-
-        data_dict = {"t": x_down}
-        for i in range(nTrials):
-            data_dict[f"Trial_{i+1}"] = Y_down[i, :]
-        df_export = pd.DataFrame(data_dict)
-
-        df_export.to_excel(xls_path, index=False)
-        print(f"Licking data exported to: {xls_path}")
+        export_licking_traces_excel(
+            sessionfilename=sessionfilename_str,
+            time_axis=x,
+            y_lick_matrix=y_lick_matrix,
+            n_trials=n_trials,
+            output_dir=output_dir,
+        )
 
     return {
-        "sessionfilename": sessionfilename,
-        "nTrials": nTrials,
-        "trialsWithLick": trialsWithLick,
-        "excludedTrials": int(np.sum(Excluded)),
-        "lengthOfTrial": lengthOfTrial,
+        "sessionfilename": sessionfilename_str,
+        "nTrials": n_trials,
+        "trialsWithLick": trials_with_lick,
+        "excludedTrials": int(np.sum(excluded)),
+        "lengthOfTrial": length_of_trial,
         "time_axis": x,
-        "Ylicktr": Ylicktr,
-        "Ylicktr_avg": Ylicktr_avg,
-        "Excluded": Excluded,
-        "intgrStimulus": intgrStimulus,
+        "Ylicktr": y_lick_matrix,
+        "Ylicktr_avg": y_lick_avg,
+        "Excluded": excluded,
+        "intgrStimulus": intgr_stimulus,
         "stimulus_onset": so,
         "stimulus_duration": so2,
         "reward_onset": ro,

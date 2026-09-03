@@ -143,3 +143,19 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+
+# =============================================================================
+# Two-Photon Analysis & Suite2P Pipeline Configuration
+# =============================================================================
+
+SUITE2P_PYTHON_PATH = os.environ.get(
+    "SUITE2P_PYTHON_PATH",
+    r"C:\Users\abhrajyoti.chakrabarti\Documents\suite2p_venv\suite2p\.venv\Scripts\python.exe",
+)
+
+SUITE2P_RUNNER_SCRIPT = os.environ.get(
+    "SUITE2P_RUNNER_SCRIPT",
+    r"C:\Users\abhrajyoti.chakrabarti\Documents\suite2p_venv\suite2p\customScripts\analysis_runner.py",
+)
+

@@ -15,6 +15,8 @@ from .services import execute_training_analysis
 
 @admin.register(TrainingSession)
 class TrainingSessionAdmin(SimpleHistoryAdmin):
+    list_select_related = ("animal",)
+
     list_display = (
         "animal",
         "training_date",
@@ -259,6 +261,7 @@ class BodyWeightEntryInline(admin.TabularInline):
 class MouseBodyWeightAdmin(SimpleHistoryAdmin):
     change_form_template = "admin/training_metadata/mousebodyweight/change_form.html"
     inlines = [BodyWeightEntryInline]
+    list_select_related = ("animal",)
 
     list_display = (
         "get_animal_id",

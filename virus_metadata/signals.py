@@ -1,13 +1,12 @@
 from django.dispatch import receiver
 from simple_history.signals import post_create_historical_record
 
-from animals_metadata.utils import format_initial_entry, get_user_initials
+from animals_metadata.utils import build_history_diff_text, get_user_initials
 from .models import TrackChanges, Virus
 
 
 @receiver(post_create_historical_record)
 def create_track_change(sender, instance, history_instance, **kwargs):
-
     model = instance.__class__
 
     if model is not Virus:
@@ -15,52 +14,7 @@ def create_track_change(sender, instance, history_instance, **kwargs):
 
     category = TrackChanges.CategoryChoices.VIRUS
     animal_id = getattr(instance, "virus_id", getattr(history_instance, "virus_id", None))
-
-    # Build human-readable change description
-    prev_record = history_instance.prev_record
-
-    if history_instance.history_type == "+":
-        changes_text = format_initial_entry(history_instance)
-
-    elif history_instance.history_type == "-":
-        changes_text = "Deleted Record"
-
-    elif prev_record:
-        changes = []
-
-        try:
-            delta = history_instance.diff_against(prev_record)
-
-            for change in delta.changes:
-                changes.append(
-                    f"{change.field}: '{change.old}' → '{change.new}'"
-                )
-
-        except TypeError:
-            excluded_fields = {
-                "history_id",
-                "history_date",
-                "history_type",
-                "history_user_id",
-                "history_change_reason",
-            }
-
-            for field in history_instance._meta.fields:
-                if field.name in excluded_fields:
-                    continue
-
-                old_val = getattr(prev_record, field.name, None)
-                new_val = getattr(history_instance, field.name, None)
-
-                if old_val != new_val:
-                    changes.append(
-                        f"{field.name}: '{old_val}' → '{new_val}'"
-                    )
-
-        changes_text = "\n".join(changes) if changes else "No field changes"
-
-    else:
-        changes_text = "No previous record"
+    changes_text = build_history_diff_text(history_instance)
 
     TrackChanges.objects.create(
         category=category,

@@ -49,6 +49,8 @@ class AnimalAdmin(SimpleHistoryAdmin):
 
 @admin.register(VisionCheck)
 class VisionCheckAdmin(SimpleHistoryAdmin):
+    list_select_related = ("animal_id",)
+
     list_display = (
         "get_animal_id",
         "vision_test_type",
@@ -219,6 +221,7 @@ class ViralInjectionAdminForm(forms.ModelForm):
 @admin.register(ViralInjection)
 class ViralInjectionAdmin(SimpleHistoryAdmin):
     form = ViralInjectionAdminForm
+    list_select_related = ("animal_id", "virus_id", "virus_id_2", "virus_id_3")
 
     list_display = (
         "get_animal_id",
