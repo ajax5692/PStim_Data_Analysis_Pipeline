@@ -4,19 +4,19 @@ PStim_DAP supports environment-driven deployment profiles via the `PSTIM_PROFILE
 
 ---
 
-## Supported Profiles
-
-| Profile                | Active Modules                                            | Description                                                                                     |
-| :--------------------- | :-------------------------------------------------------- | :---------------------------------------------------------------------------------------------- |
-| **`CORE`**             | `animals_metadata`, `virus_metadata`                      | Base animal identification, health, vision checks, and viral injection tracking.                |
-| **`IMAGING`**          | `animals_metadata`, `virus_metadata`, `imaging_metadata`  | Core modules plus 2-photon acquisition sessions and MESC metadata.                              |
-| **`TRAINING`**         | `animals_metadata`, `virus_metadata`, `training_metadata` | Core modules plus Bpod behavioral training, body weight tracking, and lick kinematics analysis. |
-| **`FULL`** _(Default)_ | All 5 domain metadata apps                                | Complete laboratory pipeline including Suite2P imaging analysis runs.                           |
+| Profile                | Active Modules                                                                        | Description                                                                                     |
+| :--------------------- | :------------------------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------- |
+| **`CORE`**             | `animals_metadata`, `virus_metadata`                                                  | Base animal identification, health, vision checks, and viral injection tracking.                |
+| **`IMAGING`**          | `animals_metadata`, `virus_metadata`, `imaging_metadata`                              | Core modules plus 2-photon acquisition sessions and MESC metadata.                              |
+| **`IMAGING_ANALYSIS`** | `animals_metadata`, `virus_metadata`, `imaging_metadata`, `imaging_analysis_metadata` | Core modules, 2-photon acquisition, and Suite2P automated analysis runs.                        |
+| **`TRAINING`**         | `animals_metadata`, `virus_metadata`, `training_metadata`                             | Core modules plus Bpod behavioral training, body weight tracking, and lick kinematics analysis. |
+| **`FULL`** _(Default)_ | All 5 domain metadata apps                                                            | Complete laboratory pipeline with imaging, analysis, and behavioral training.                   |
 
 > [!NOTE]
 >
 > - `training_data_processing` is an internal Python subpackage of `training_metadata`, not a separate Django app.
-> - `imaging_analysis_metadata` depends on `imaging_metadata` and is only included in the `FULL` profile.
+> - `imaging_analysis_metadata` depends on `imaging_metadata` and requires `imaging_metadata` to be active.
+> - `PSTIM_PROFILE` accepts both `IMAGING_ANALYSIS` and `IMAGING ANALYSIS`.
 
 ---
 

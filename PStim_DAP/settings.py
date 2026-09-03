@@ -58,6 +58,12 @@ DEPLOYMENT_PROFILES = {
         'virus_metadata',
         'imaging_metadata',
     ],
+    'IMAGING_ANALYSIS': [
+        'animals_metadata',
+        'virus_metadata',
+        'imaging_metadata',
+        'imaging_analysis_metadata',
+    ],
     'TRAINING': [
         'animals_metadata',
         'virus_metadata',
@@ -72,7 +78,7 @@ DEPLOYMENT_PROFILES = {
     ],
 }
 
-PSTIM_PROFILE = os.getenv("PSTIM_PROFILE", "FULL").strip().upper()
+PSTIM_PROFILE = os.getenv("PSTIM_PROFILE", "FULL").strip().upper().replace(" ", "_")
 
 if PSTIM_PROFILE not in DEPLOYMENT_PROFILES:
     valid_profiles = ", ".join(DEPLOYMENT_PROFILES.keys())
