@@ -1,5 +1,11 @@
 import re
-from typing import Any, Optional
+from typing import Any, List, Optional, Set, Tuple, Union
+
+from django.contrib import admin
+from django.db import models
+from django.http import HttpRequest
+from django.utils import timezone
+from django.utils.html import SafeString, format_html
 
 
 def get_user_initials(user_or_username: Any) -> str:
@@ -154,3 +160,258 @@ def build_history_diff_text(history_instance: Any) -> str:
                 changes.append(f"{field.name}: '{old_val}' → '{new_val}'")
 
     return "\n".join(changes) if changes else "No field changes"
+
+
+def render_copyable_path_widget(
+    file_path: Optional[str],
+    tooltip: str = "Copy file path",
+) -> SafeString:
+    """
+    Render a clean inline copy button widget with SVG icon and text container.
+
+    Args:
+        file_path: Path string to display and copy.
+        tooltip: Tooltip message for hover state and aria-label.
+
+    Returns:
+        Escaped HTML string safely rendered in Django admin tables.
+    """
+    path_val = (file_path or "").strip()
+    if not path_val or path_val.lower() == "not available":
+        return format_html('<span style="color: #64748b;">-</span>')
+
+    return format_html(
+        '<div style="display: grid; '
+        'grid-template-columns: max-content 1fr; '
+        'column-gap: 6px; '
+        'align-items: start;">'
+            '<button type="button" '
+            'class="pstim-copy-button" '
+            'data-copy-text="{}" '
+            'title="{}" '
+            'aria-label="{}">'
+                '<svg '
+                'width="16" '
+                'height="16" '
+                'viewBox="0 0 24 24" '
+                'fill="none" '
+                'stroke="currentColor" '
+                'stroke-width="2" '
+                'stroke-linecap="round" '
+                'stroke-linejoin="round" '
+                'aria-hidden="true">'
+                    '<rect x="8" y="8" width="12" height="12" rx="2"></rect>'
+                    '<path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>'
+                '</svg>'
+            '</button>'
+            '<span style="overflow-wrap: anywhere;">{}</span>'
+        '</div>',
+        path_val,
+        tooltip,
+        tooltip,
+        path_val,
+    )
+
+
+class BaseTrackChangesAdmin(admin.ModelAdmin):
+    """
+    Shared base ModelAdmin for TrackChanges audit trail across all domain apps.
+    Eliminates duplicated admin configuration across apps.
+    """
+
+    list_display = (
+        "category",
+        "animal_id",
+        "action",
+        "changed_at",
+        "display_changed_by",
+        "changes",
+    )
+
+    list_filter = (
+        "category",
+        "action",
+        "changed_at",
+    )
+
+    search_fields = (
+        "animal_id",
+        "changed_by",
+        "changes",
+    )
+
+    readonly_fields = (
+        "category",
+        "animal_id",
+        "action",
+        "changed_at",
+        "changed_by",
+        "changes",
+    )
+
+    ordering = ("-changed_at",)
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+    def has_delete_permission(self, request: HttpRequest, obj: Optional[models.Model] = None) -> bool:
+        return False
+
+    def has_change_permission(self, request: HttpRequest, obj: Optional[models.Model] = None) -> bool:
+        return False
+
+    @admin.display(description="User Initials")
+    def display_changed_by(self, obj: Any) -> str:
+        return get_user_initials(obj.changed_by)
+
+
+class BaseAsyncJobModel(models.Model):
+    """
+    Abstract base model for asynchronous pipeline jobs (e.g. Suite2p analysis, Bpod lick extraction).
+    Standardizes status choices, timestamps, error fields, and state transitions.
+    """
+
+    class StatusChoices(models.TextChoices):
+        PENDING = "pending", "Pending"
+        RUNNING = "running", "Running"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.PENDING,
+    )
+
+    created_at = models.DateTimeField(
+        default=timezone.now,
+    )
+
+    started_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    completed_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    error_message = models.TextField(
+        blank=True,
+        help_text="Error details recorded if the analysis job fails.",
+    )
+
+    def mark_running(self) -> None:
+        self.status = self.StatusChoices.RUNNING
+        self.started_at = timezone.now()
+        self.completed_at = None
+        self.error_message = ""
+        self.save(
+            update_fields=[
+                "status",
+                "started_at",
+                "completed_at",
+                "error_message",
+            ]
+        )
+
+    def mark_failed(self, error_message: Any = "") -> None:
+        self.status = self.StatusChoices.FAILED
+        self.completed_at = timezone.now()
+        self.error_message = str(error_message)
+        self.save(
+            update_fields=[
+                "status",
+                "completed_at",
+                "error_message",
+            ]
+        )
+
+    class Meta:
+        abstract = True
+
+
+def parse_unit_ranges(unit_range_input: Optional[Union[str, List[int], range, Set[int]]]) -> Optional[List[int]]:
+    """
+    Convert a unit/trial range string (e.g. '10:21,25:55' or '3-174') into a sorted list of 1-based integers.
+
+    Args:
+        unit_range_input: String, list of integers, or range.
+
+    Returns:
+        Sorted list of integer numbers, or None if all units/trials should be included.
+    """
+    if unit_range_input is None:
+        return None
+
+    if isinstance(unit_range_input, (list, tuple, range, set)):
+        return sorted(list(set(int(x) for x in unit_range_input)))
+
+    unit_range_str = str(unit_range_input).strip()
+    if not unit_range_str or unit_range_str.lower() in ("all", "none", "*", ""):
+        return None
+
+    units: Set[int] = set()
+    for part in unit_range_str.split(","):
+        part = part.strip()
+        if not part:
+            continue
+
+        if ":" in part:
+            pieces = part.split(":")
+            if len(pieces) == 2:
+                try:
+                    s, e = int(pieces[0]), int(pieces[1])
+                    units.update(range(min(s, e), max(s, e) + 1))
+                except ValueError:
+                    continue
+        elif "-" in part:
+            pieces = part.split("-")
+            if len(pieces) == 2:
+                try:
+                    s, e = int(pieces[0]), int(pieces[1])
+                    units.update(range(min(s, e), max(s, e) + 1))
+                except ValueError:
+                    continue
+        else:
+            try:
+                units.add(int(part))
+            except ValueError:
+                continue
+
+    return sorted(list(units)) if units else None
+
+
+def record_track_change(
+    track_changes_model: type,
+    category: str,
+    entity_id: Optional[str],
+    history_instance: Any,
+) -> None:
+    """
+    Centralized helper to record an audit trail entry in a domain TrackChanges table.
+
+    Args:
+        track_changes_model: The TrackChanges model class for the domain.
+        category: CategoryChoices enum value.
+        entity_id: The animal_id or virus_id associated with the change.
+        history_instance: The historical record created by django-simple-history.
+    """
+    changes_text = build_history_diff_text(history_instance)
+    user_initials = (
+        get_user_initials(history_instance.history_user)
+        if history_instance.history_user
+        else None
+    )
+
+    track_changes_model.objects.create(
+        category=category,
+        animal_id=str(entity_id) if entity_id is not None else "",
+        action=history_instance.history_type,
+        changed_at=history_instance.history_date,
+        changed_by=user_initials,
+        changes=changes_text,
+    )
+
+

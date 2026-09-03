@@ -60,17 +60,8 @@ def build_analysis_command(analysis_run: AnalysisRun, result_file: Path) -> List
     """
     inputs = get_analysis_inputs(analysis_run)
 
-    default_python = (
-        r"C:\Users\abhrajyoti.chakrabarti\Documents"
-        r"\suite2p_venv\suite2p\.venv\Scripts\python.exe"
-    )
-    default_runner = (
-        r"C:\Users\abhrajyoti.chakrabarti\Documents"
-        r"\suite2p_venv\suite2p\customScripts\analysis_runner.py"
-    )
-
-    suite2p_python = getattr(settings, "SUITE2P_PYTHON_PATH", default_python)
-    analysis_runner = getattr(settings, "SUITE2P_RUNNER_SCRIPT", default_runner)
+    suite2p_python = getattr(settings, "SUITE2P_PYTHON_PATH", "python")
+    analysis_runner = getattr(settings, "SUITE2P_RUNNER_SCRIPT", "")
 
     command = [
         str(suite2p_python),
@@ -214,14 +205,35 @@ def execute_analysis(
         raise
 
 
-def claim_next_pending_analysis() -> Optional[AnalysisRun]:
+def claim_next_pending_analysis(stale_threshold_hours: int = 4) -> Optional[AnalysisRun]:
     """
     Atomically find and claim the oldest pending AnalysisRun using row-level locking.
+    Automatically recovers any orphaned runs stuck in RUNNING status past the stale threshold.
+
+    Args:
+        stale_threshold_hours: Maximum hours a job may remain RUNNING before being auto-failed.
 
     Returns:
         The claimed AnalysisRun in RUNNING status, or None if queue is empty.
     """
     with transaction.atomic():
+        from datetime import timedelta
+        from django.utils import timezone
+
+        stale_cutoff = timezone.now() - timedelta(hours=stale_threshold_hours)
+        stale_runs = (
+            AnalysisRun.objects
+            .select_for_update(skip_locked=True)
+            .filter(
+                status=AnalysisRun.StatusChoices.RUNNING,
+                started_at__lt=stale_cutoff,
+            )
+        )
+        for stale_run in stale_runs:
+            stale_run.mark_failed(
+                f"Analysis timed out or was interrupted (running longer than {stale_threshold_hours}h)."
+            )
+
         analysis_run = (
             AnalysisRun.objects
             .select_for_update(skip_locked=True)

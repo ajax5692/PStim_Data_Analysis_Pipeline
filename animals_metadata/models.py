@@ -60,7 +60,7 @@ class VisionCheck(models.Model):
         
     animal_id = models.ForeignKey(
         Animal,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         verbose_name="Animal ID"
     )
     
@@ -71,7 +71,7 @@ class VisionCheck(models.Model):
 
     class Meta:
         verbose_name = "Vision Check"
-        verbose_name_plural = "Vision Check"
+        verbose_name_plural = "Vision Checks"
 
     def __str__(self):
         return f"{self.animal_id}"
@@ -80,7 +80,7 @@ class ViralInjection(models.Model):
 
     animal_id = models.ForeignKey(
         Animal,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
     )
 
     class InjectionSiteChoices(models.TextChoices):

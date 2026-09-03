@@ -3,26 +3,15 @@ from django.db import models
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
+from animals_metadata.utils import BaseAsyncJobModel
 from .utils import parse_unit_ranges
 
 
-class AnalysisRun(models.Model):
-    class StatusChoices(models.TextChoices):
-        PENDING = "pending", "Pending"
-        RUNNING = "running", "Running"
-        COMPLETED = "completed", "Completed"
-        FAILED = "failed", "Failed"
-
+class AnalysisRun(BaseAsyncJobModel):
     imaging_session = models.ForeignKey(
         "imaging_metadata.ImagingSession",
         on_delete=models.PROTECT,
         related_name="analysis_runs",
-    )
-
-    status = models.CharField(
-        max_length=20,
-        choices=StatusChoices.choices,
-        default=StatusChoices.PENDING,
     )
     
     frame_rate = models.DecimalField(
@@ -45,20 +34,6 @@ class AnalysisRun(models.Model):
         help_text="Calcium indicator decay time constant used for analysis.",
     )
 
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-    )
-
-    started_at = models.DateTimeField(
-        blank=True,
-        null=True,
-    )
-
-    completed_at = models.DateTimeField(
-        blank=True,
-        null=True,
-    )
-    
     output_log_path = models.CharField(
         max_length=500,
         blank=True,
@@ -74,11 +49,6 @@ class AnalysisRun(models.Model):
     notes = models.TextField(
         blank=True,
     )
-    
-    error_message = models.TextField(
-        blank=True,
-        help_text="Error message recorded if the analysis run fails.",
-    )
 
     @property
     def animal_id(self):
@@ -89,37 +59,11 @@ class AnalysisRun(models.Model):
         return parse_unit_ranges(
             self.imaging_session.measurement_unit_ranges
         )
-        
-    def mark_running(self):
-        self.status = self.StatusChoices.RUNNING
-        self.started_at = timezone.now()
-        self.completed_at = None
-        self.error_message = ""
 
-        self.save(
-            update_fields=[
-                "status",
-                "started_at",
-                "completed_at",
-                "error_message",
-            ]
-        )
-
-    def mark_completed(self):
+    def mark_completed(self) -> None:
         self.status = self.StatusChoices.COMPLETED
         self.completed_at = timezone.now()
-        self.save(
-            update_fields=[
-                "status",
-                "completed_at",
-            ]
-        )
-
-    def mark_failed(self, error_message=""):
-        self.status = self.StatusChoices.FAILED
-        self.completed_at = timezone.now()
-        self.error_message = str(error_message)
-
+        self.error_message = ""
         self.save(
             update_fields=[
                 "status",

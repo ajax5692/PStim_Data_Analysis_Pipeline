@@ -9,6 +9,10 @@ from animals_metadata.models import (
     ViralInjection,
     VisionCheck,
 )
+from animals_metadata.utils import (
+    BaseTrackChangesAdmin,
+    render_copyable_path_widget,
+)
 
 
 @admin.register(Animal)
@@ -76,55 +80,7 @@ class VisionCheckAdmin(SimpleHistoryAdmin):
     
     @admin.display(description="Data Path", ordering="data_path")
     def display_data_path(self, obj):
-        data_path = obj.data_path or "Not available"
-
-        return format_html(
-            '<div style="display: grid; '
-            'grid-template-columns: max-content 1fr; '
-            'column-gap: 6px; '
-            'align-items: start;">'
-
-                '<button type="button" '
-                'class="pstim-copy-button" '
-                'data-copy-text="{}" '
-                'title="Copy MESC file path" '
-                'aria-label="Copy MESC file path">'
-
-                    '<svg '
-                    'width="16" '
-                    'height="16" '
-                    'viewBox="0 0 24 24" '
-                    'fill="none" '
-                    'stroke="currentColor" '
-                    'stroke-width="2" '
-                    'stroke-linecap="round" '
-                    'stroke-linejoin="round" '
-                    'aria-hidden="true">'
-
-                        '<rect '
-                        'x="8" '
-                        'y="8" '
-                        'width="12" '
-                        'height="12" '
-                        'rx="2">'
-                        '</rect>'
-
-                        '<path '
-                        'd="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2">'
-                        '</path>'
-
-                    '</svg>'
-
-                '</button>'
-
-                '<span style="overflow-wrap: anywhere;">'
-                '{}'
-                '</span>'
-
-            '</div>',
-            data_path,
-            data_path,
-        )
+        return render_copyable_path_widget(obj.data_path, tooltip="Copy data path")
 
 
 class ViralInjectionAdminForm(forms.ModelForm):
@@ -405,105 +361,9 @@ class ViralInjectionAdmin(SimpleHistoryAdmin):
     
     @admin.display(description="Expression (Checkup MESC File)", ordering="expression")
     def display_expression_mescfile_path(self, obj):
-        expression = obj.expression or "Not available"
-
-        return format_html(
-            '<div style="display: grid; '
-            'grid-template-columns: max-content 1fr; '
-            'column-gap: 6px; '
-            'align-items: start;">'
-
-                '<button type="button" '
-                'class="pstim-copy-button" '
-                'data-copy-text="{}" '
-                'title="Copy MESC file path" '
-                'aria-label="Copy MESC file path">'
-
-                    '<svg '
-                    'width="16" '
-                    'height="16" '
-                    'viewBox="0 0 24 24" '
-                    'fill="none" '
-                    'stroke="currentColor" '
-                    'stroke-width="2" '
-                    'stroke-linecap="round" '
-                    'stroke-linejoin="round" '
-                    'aria-hidden="true">'
-
-                        '<rect '
-                        'x="8" '
-                        'y="8" '
-                        'width="12" '
-                        'height="12" '
-                        'rx="2">'
-                        '</rect>'
-
-                        '<path '
-                        'd="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2">'
-                        '</path>'
-
-                    '</svg>'
-
-                '</button>'
-
-                '<span style="overflow-wrap: anywhere;">'
-                '{}'
-                '</span>'
-
-            '</div>',
-            expression,
-            expression,
-        )
-
-
-from .utils import get_user_initials
+        return render_copyable_path_widget(obj.expression, tooltip="Copy MESC file path")
 
 
 @admin.register(TrackChanges)
-class TrackChangesAdmin(admin.ModelAdmin):
-    list_display = (
-        "category",
-        "animal_id",
-        "action",
-        "changed_at",
-        "display_changed_by",
-        "changes",
-    )
-
-    list_filter = (
-        "category",
-        "action",
-        "changed_at",
-    )
-
-    search_fields = (
-        "animal_id",
-        "changed_by",
-        "changes",
-    )
-
-    ordering = (
-        "-changed_at",
-    )
-
-    readonly_fields = (
-        "category",
-        "animal_id",
-        "action",
-        "changed_at",
-        "changed_by",
-        "changes",
-    )
-
-    @admin.display(description="Changed by", ordering="changed_by")
-    def display_changed_by(self, obj):
-        return get_user_initials(obj.changed_by)
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
+class TrackChangesAdmin(BaseTrackChangesAdmin):
+    pass

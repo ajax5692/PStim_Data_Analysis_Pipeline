@@ -1,30 +1,33 @@
+from typing import Any
+
+from django.db import models
 from django.dispatch import receiver
 from simple_history.signals import post_create_historical_record
 
-from animals_metadata.utils import build_history_diff_text, get_user_initials
+from animals_metadata.utils import record_track_change
 from .models import TrackChanges, Virus
 
 
 @receiver(post_create_historical_record)
-def create_track_change(sender, instance, history_instance, **kwargs):
+def create_track_change(
+    sender: Any,
+    instance: models.Model,
+    history_instance: Any,
+    **kwargs: Any,
+) -> None:
+    """
+    Record an audit trail entry in TrackChanges upon historical record creation for Virus.
+    """
     model = instance.__class__
 
     if model is not Virus:
         return
 
-    category = TrackChanges.CategoryChoices.VIRUS
     animal_id = getattr(instance, "virus_id", getattr(history_instance, "virus_id", None))
-    changes_text = build_history_diff_text(history_instance)
 
-    TrackChanges.objects.create(
-        category=category,
-        animal_id=animal_id,
-        action=history_instance.history_type,
-        changed_at=history_instance.history_date,
-        changed_by=(
-            get_user_initials(history_instance.history_user)
-            if history_instance.history_user
-            else None
-        ),
-        changes=changes_text,
+    record_track_change(
+        track_changes_model=TrackChanges,
+        category=TrackChanges.CategoryChoices.VIRUS,
+        entity_id=animal_id,
+        history_instance=history_instance,
     )

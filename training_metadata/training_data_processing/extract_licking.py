@@ -2,7 +2,7 @@
 Extracts, corrects, aligns, and analyzes lick port data from Bpod SessionData files
 for lick-triggered reward protocols (Visual Go / No-Go tasks).
 
-Supports restricting analysis to user-specified training unit/trial ranges.
+Supports restricting analysis to user-specified training unit/trial ranges and customizable plot styles.
 """
 
 import os
@@ -16,6 +16,23 @@ import numpy.typing as npt
 import pandas as pd
 import scipy.io as sio
 from scipy.signal import windows
+
+
+DEFAULT_PLOT_STYLE: Dict[str, Any] = {
+    "figsize": (10, 6),
+    "dpi": 300,
+    "go_color": "#006837",
+    "nogo_color": "#d73027",
+    "stimulus_color": "#cccccc",
+    "stimulus_alpha": 0.8,
+    "reward_color": "#777777",
+    "punish_color": "darkgray",
+    "raster_linewidth": 1.2,
+    "trace_linewidth": 2.0,
+    "font_size_label": 11,
+    "font_size_title": 12,
+    "font_size_legend": 10,
+}
 
 
 class ExtractionResult(TypedDict):
@@ -37,221 +54,16 @@ class ExtractionResult(TypedDict):
     unit_range: Optional[str]
 
 
-def parse_unit_ranges(unit_range_input: Optional[Union[str, List[int], range, Set[int]]]) -> Optional[List[int]]:
-    """
-    Convert a unit/trial range string (e.g. '10:21,25:55' or '3-174') into a sorted list of 1-based integers.
-
-    Args:
-        unit_range_input: String, list of integers, or range.
-
-    Returns:
-        Sorted list of integer trial numbers, or None if all trials should be analyzed.
-    """
-    if unit_range_input is None:
-        return None
-
-    if isinstance(unit_range_input, (list, tuple, range, set)):
-        return sorted(list(set(int(x) for x in unit_range_input)))
-
-    unit_range_str = str(unit_range_input).strip()
-    if not unit_range_str or unit_range_str.lower() in ("all", "none", "*", ""):
-        return None
-
-    units: Set[int] = set()
-    for part in unit_range_str.split(","):
-        part = part.strip()
-        if not part:
-            continue
-
-        if ":" in part:
-            pieces = part.split(":")
-            if len(pieces) == 2:
-                try:
-                    s, e = int(pieces[0]), int(pieces[1])
-                    units.update(range(min(s, e), max(s, e) + 1))
-                except ValueError:
-                    continue
-        elif "-" in part:
-            pieces = part.split("-")
-            if len(pieces) == 2:
-                try:
-                    s, e = int(pieces[0]), int(pieces[1])
-                    units.update(range(min(s, e), max(s, e) + 1))
-                except ValueError:
-                    continue
-        else:
-            try:
-                units.add(int(part))
-            except ValueError:
-                continue
-
-    return sorted(list(units)) if units else None
-
-
-def _get_field(obj: Any, field_name: str, default: Any = None) -> Any:
-    """Safely retrieve a field from a MATLAB struct or dictionary."""
-    if obj is None:
-        return default
-    if isinstance(obj, dict):
-        return obj.get(field_name, default)
-    if hasattr(obj, field_name):
-        return getattr(obj, field_name)
-    return default
-
-
-def _has_field(obj: Any, field_name: str) -> bool:
-    """Check if a field exists in a MATLAB struct or dictionary."""
-    if obj is None:
-        return False
-    if isinstance(obj, dict):
-        return field_name in obj
-    return hasattr(obj, field_name)
-
-
-def _to_1d_array(val: Any) -> npt.NDArray[np.float64]:
-    """Ensure input is converted to a 1D numpy array of floats."""
-    if val is None:
-        return np.array([], dtype=np.float64)
-    return np.atleast_1d(val).astype(np.float64).flatten()
-
-
-def _to_2d_array(val: Any) -> npt.NDArray[np.float64]:
-    """Ensure input is converted to a 2D numpy array of floats."""
-    if val is None:
-        return np.empty((0, 0), dtype=np.float64)
-    return np.atleast_2d(val).astype(np.float64)
-
-
-def _integrate_trapz(
-    x: npt.NDArray[np.float64],
-    y: npt.NDArray[np.float64],
-    t1: Optional[float],
-    t2: Optional[float],
-) -> float:
-    """
-    Calculate the trapezoidal integral of y(x) between x ~= t1 and x ~= t2.
-    Matches MATLAB trapz(x(ix1:ix2), y(ix1:ix2)).
-
-    Args:
-        x: 1D array of time timestamps.
-        y: 1D array of signal amplitudes.
-        t1: Lower bound integration timestamp.
-        t2: Upper bound integration timestamp.
-
-    Returns:
-        Computed scalar area under the curve.
-    """
-    if len(x) == 0 or len(y) == 0 or t1 is None or t2 is None or t1 >= t2:
-        return 0.0
-    ix1 = int(np.argmin(np.abs(x - t1)))
-    ix2 = int(np.argmin(np.abs(x - t2)))
-    if ix1 > ix2:
-        ix1, ix2 = ix2, ix1
-    if ix1 == ix2:
-        return 0.0
-    return float(np.trapezoid(y[ix1 : ix2 + 1], x[ix1 : ix2 + 1]))
-
-
-def load_bpod_session(sessionfilename: Union[str, Path]) -> Any:
-    """
-    Load a Bpod .mat session file and extract the SessionData struct.
-
-    Args:
-        sessionfilename: Absolute or relative path to the Bpod .mat file.
-
-    Returns:
-        SessionData object parsed from MATLAB format.
-
-    Raises:
-        FileNotFoundError: If the file does not exist on disk.
-        ValueError: If MATLAB parsing fails.
-        KeyError: If SessionData key is absent.
-    """
-    file_path = Path(sessionfilename)
-    if not file_path.exists():
-        raise FileNotFoundError(f"Session file not found: {file_path}")
-
-    try:
-        mat = sio.loadmat(str(file_path), squeeze_me=True, struct_as_record=False)
-        if "SessionData" in mat:
-            return mat["SessionData"]
-    except Exception as e:
-        raise ValueError(f"Could not load SessionData from {file_path}: {e}")
-
-    raise KeyError("SessionData struct not found in MAT file.")
-
-
-def determine_session_timing(
-    session_data: Any,
-    selected_trials: List[int],
-) -> Tuple[float, float, float, float, float, float, float]:
-    """
-    Determine trial length, event onsets, and stimulus boundaries across selected trials.
-
-    Args:
-        session_data: The Bpod SessionData object.
-        selected_trials: List of 1-based trial numbers to evaluate.
-
-    Returns:
-        Tuple of (lengthOfTrial, so, so2, ro, po, visStimStart, visStimEnd).
-    """
-    length_of_trial = 0.0
-    ro = 0.0
-    po = 0.0
-    so = 0.0
-    so2 = 0.0
-
-    for trial_num in selected_trials:
-        idx = trial_num - 1
-        trial = session_data.RawEvents.Trial[idx]
-        states = trial.States
-        events = trial.Events
-
-        if _has_field(states, "WaitingForTrigger_Start"):
-            wfts = _to_1d_array(_get_field(states, "WaitingForTrigger_Start"))
-            lag_init = float(wfts[1]) if len(wfts) > 1 else 0.0
-        elif _has_field(states, "WaitingForTrigger"):
-            wft = _to_1d_array(_get_field(states, "WaitingForTrigger"))
-            lag_init = float(wft[1]) if len(wft) > 1 else 0.0
-        elif _has_field(states, "InitialDelay"):
-            init_delay = _to_2d_array(_get_field(states, "InitialDelay"))
-            lag_init = float(init_delay[-1, 0]) if init_delay.size > 0 else 0.0
-        else:
-            lag_init = 0.0
-
-        tup = _to_1d_array(_get_field(events, "Tup"))
-        cur_trial_len = (tup[-1] - lag_init) if len(tup) > 0 else 0.0
-        if length_of_trial < cur_trial_len:
-            length_of_trial = cur_trial_len
-
-        if _has_field(states, "DeliverReward"):
-            rew = _to_1d_array(_get_field(states, "DeliverReward"))
-            if len(rew) > 0 and not np.isnan(rew[0]):
-                ro = round(float(rew[0] - lag_init), 2)
-
-        if _has_field(states, "DeliverPunish"):
-            pun = _to_1d_array(_get_field(states, "DeliverPunish"))
-            if len(pun) > 0 and not np.isnan(pun[0]):
-                po = round(float(pun[0] - lag_init), 2)
-
-        if _has_field(states, "SummonVideo"):
-            sv = _to_1d_array(_get_field(states, "SummonVideo"))
-            if len(sv) > 0 and not np.isnan(sv[0]):
-                so = round(float(sv[0] - lag_init), 2)
-                so2 = round(float(sv[1] - sv[0]), 2) if len(sv) > 1 else 0.0
-        elif _has_field(states, "DeliverStimulus"):
-            ds = _to_1d_array(_get_field(states, "DeliverStimulus"))
-            if len(ds) > 0 and not np.isnan(ds[0]):
-                so = round(float(ds[0] - lag_init), 2)
-
-    if so > 0:
-        vis_stim_start = so
-        vis_stim_end = so + (so2 if so2 > 0 else 3.0)
-    else:
-        vis_stim_start = 3.55
-        vis_stim_end = 6.55
-
-    return length_of_trial, so, so2, ro, po, vis_stim_start, vis_stim_end
+from animals_metadata.utils import parse_unit_ranges
+from .bpod_io import (
+    _get_field,
+    _has_field,
+    _integrate_trapz,
+    _to_1d_array,
+    _to_2d_array,
+    determine_session_timing,
+    load_bpod_session,
+)
 
 
 def extract_trial_lick_matrix(
@@ -440,17 +252,30 @@ def generate_lick_figures(
     show_plots: bool,
     block_plots: bool,
     unit_range_label: Optional[str] = None,
+    plot_style: Optional[Dict[str, Any]] = None,
 ) -> List[plt.Figure]:
     """
     Render and optionally save raster plot and average licking trace figures.
     """
+    style = {**DEFAULT_PLOT_STYLE, **(plot_style or {})}
     figs: List[plt.Figure] = []
     filename_base = os.path.basename(sessionfilename)
 
+    color_go = style.get("go_color", "#006837")
+    color_nogo = style.get("nogo_color", "#d73027")
+    stim_color = style.get("stimulus_color", "#cccccc")
+    stim_alpha = style.get("stimulus_alpha", 0.8)
+    reward_color = style.get("reward_color", "#777777")
+    punish_color = style.get("punish_color", "darkgray")
+    raster_lw = style.get("raster_linewidth", 1.2)
+    trace_lw = style.get("trace_linewidth", 2.0)
+    fig_size = style.get("figsize", (10, 6))
+    plot_dpi = style.get("dpi", 300)
+
     # Color palette
     tp = np.array([
-        [0.0, 0.4, 0.2],    # Go - Dark Green
-        [0.85, 0.2, 0.15],  # No-Go - Red
+        [0.0, 0.4, 0.2],    # Go
+        [0.85, 0.2, 0.15],  # No-Go
     ])
     if max_trial_type > 2:
         extra_colors = plt.cm.tab10(np.linspace(0, 1, max_trial_type))[:, :3]
@@ -459,62 +284,60 @@ def generate_lick_figures(
     range_suffix = f" (Units {unit_range_label})" if unit_range_label else ""
 
     # FIGURE 1: Raster Plot
-    fig1, ax1 = plt.subplots(figsize=(10, 6))
+    fig1, ax1 = plt.subplots(figsize=fig_size)
     if hasattr(fig1.canvas, "manager") and fig1.canvas.manager:
         fig1.canvas.manager.set_window_title(f"licks occurrence file: {filename_base}")
 
-    ax1.axvspan(vis_stim_start, vis_stim_end, color="#cccccc", alpha=0.8, label="Video", zorder=0)
+    ax1.axvspan(vis_stim_start, vis_stim_end, color=stim_color, alpha=stim_alpha, label="Video", zorder=0)
     if ro > 0:
-        ax1.axvline(ro, color="#777777", linestyle="--", linewidth=1.5, label="Reward", zorder=1)
+        ax1.axvline(ro, color=reward_color, linestyle="--", linewidth=1.5, label="Reward", zorder=1)
     if po > 0:
-        ax1.axvline(po, color="darkgray", linestyle="--", linewidth=1.5, label="Punishment", zorder=1)
+        ax1.axvline(po, color=punish_color, linestyle="--", linewidth=1.5, label="Punishment", zorder=1)
 
     lgnd_plotted = set()
     for i in range(n_trials):
         if i in trial_lick_events and not excluded[i]:
             tt = trial_types_raw[i]
-            color = tp[tt - 1] if tt <= len(tp) else "blue"
+            color = color_go if tt == 1 else (color_nogo if tt == 2 else (tp[tt - 1] if tt <= len(tp) else "blue"))
             label = ("Go trials" if tt == 1 else "NoGo trials") if tt not in lgnd_plotted else None
             if label:
                 lgnd_plotted.add(tt)
-            ax1.vlines(trial_lick_events[i], ymin=0, ymax=1, color=color, linewidth=1.2, label=label, zorder=2)
+            ax1.vlines(trial_lick_events[i], ymin=0, ymax=1, color=color, linewidth=raster_lw, label=label, zorder=2)
 
     ax1.set_ylim(0, 3)
     ax1.set_xlim(0, max(length_of_trial, 1.0))
-    ax1.set_ylabel("Licking", fontsize=11)
-    ax1.set_xlabel("Time (s)", fontsize=11)
+    ax1.set_ylabel("Licking", fontsize=style.get("font_size_label", 11))
+    ax1.set_xlabel("Time (s)", fontsize=style.get("font_size_label", 11))
     clean_stem = Path(sessionfilename).stem.replace("_", " ")
-    ax1.set_title(f"Lick Occurrences - {clean_stem}{range_suffix}", fontsize=12, fontweight="bold")
-    ax1.legend(loc="upper right", frameon=False, fontsize=10)
+    ax1.set_title(f"Lick Occurrences - {clean_stem}{range_suffix}", fontsize=style.get("font_size_title", 12), fontweight="bold")
+    ax1.legend(loc="upper right", frameon=False, fontsize=style.get("font_size_legend", 10))
     ax1.spines["top"].set_visible(False)
     ax1.spines["right"].set_visible(False)
     ax1.tick_params(direction="out")
     figs.append(fig1)
 
     # FIGURE 2: Averaged Licking Traces
-    fig2, ax2 = plt.subplots(figsize=(10, 6))
+    fig2, ax2 = plt.subplots(figsize=fig_size)
     if hasattr(fig2.canvas, "manager") and fig2.canvas.manager:
         fig2.canvas.manager.set_window_title(f"licks traces file: {filename_base}")
 
-    color_go = "#006837"
-    color_nogo = "#d73027"
     n_go = int(np.sum((trial_types_raw == 1) & (~excluded)))
     n_nogo = int(np.sum((trial_types_raw == 2) & (~excluded)))
 
-    ax2.axvspan(vis_stim_start, vis_stim_end, color="#cccccc", alpha=0.8, label="Video", zorder=0)
+    ax2.axvspan(vis_stim_start, vis_stim_end, color=stim_color, alpha=stim_alpha, label="Video", zorder=0)
     if ro > 0:
-        ax2.axvline(ro, color="#777777", linestyle="--", linewidth=1.5, label="Reward", zorder=1)
+        ax2.axvline(ro, color=reward_color, linestyle="--", linewidth=1.5, label="Reward", zorder=1)
     if po > 0:
-        ax2.axvline(po, color="darkgray", linestyle="--", linewidth=1.5, label="Punishment", zorder=1)
+        ax2.axvline(po, color=punish_color, linestyle="--", linewidth=1.5, label="Punishment", zorder=1)
 
     if 1 in y_lick_avg:
-        ax2.plot(time_axis, y_lick_avg[1], color=color_go, linewidth=2.0, label=f"Go trials (={n_go})", zorder=3)
+        ax2.plot(time_axis, y_lick_avg[1], color=color_go, linewidth=trace_lw, label=f"Go trials (={n_go})", zorder=3)
     if 2 in y_lick_avg:
-        ax2.plot(time_axis, y_lick_avg[2], color=color_nogo, linewidth=2.0, label=f"NoGo trials (={n_nogo})", zorder=3)
+        ax2.plot(time_axis, y_lick_avg[2], color=color_nogo, linewidth=trace_lw, label=f"NoGo trials (={n_nogo})", zorder=3)
 
     for tt in range(3, max_trial_type + 1):
         if tt in y_lick_avg:
-            ax2.plot(time_axis, y_lick_avg[tt], linewidth=2.0, label=f"Trial type {tt}", zorder=3)
+            ax2.plot(time_axis, y_lick_avg[tt], linewidth=trace_lw, label=f"Trial type {tt}", zorder=3)
 
     x_max_view = 20.0 if length_of_trial >= 18.0 else max(length_of_trial, 1.0)
     ax2.set_xlim(0, x_max_view)
@@ -524,10 +347,10 @@ def generate_lick_figures(
     ax2.set_ylim(0, y_max_view)
     ax2.set_yticks(np.arange(0, y_max_view + 0.01, 0.05))
 
-    ax2.set_ylabel("Licking", fontsize=11)
-    ax2.set_xlabel("Time (s)", fontsize=11)
-    ax2.set_title(f"Average licking trace - {clean_stem}{range_suffix}", fontsize=12, fontweight="bold")
-    ax2.legend(loc="upper right", frameon=False, fontsize=10)
+    ax2.set_ylabel("Licking", fontsize=style.get("font_size_label", 11))
+    ax2.set_xlabel("Time (s)", fontsize=style.get("font_size_label", 11))
+    ax2.set_title(f"Average licking trace - {clean_stem}{range_suffix}", fontsize=style.get("font_size_title", 12), fontweight="bold")
+    ax2.legend(loc="upper right", frameon=False, fontsize=style.get("font_size_legend", 10))
     ax2.spines["top"].set_visible(False)
     ax2.spines["right"].set_visible(False)
     ax2.tick_params(direction="out")
@@ -536,8 +359,8 @@ def generate_lick_figures(
     if save_plots and output_dir:
         os.makedirs(output_dir, exist_ok=True)
         stem = Path(sessionfilename).stem
-        fig1.savefig(os.path.join(output_dir, f"{stem}_lick_occurrence.png"), dpi=300, bbox_inches="tight")
-        fig2.savefig(os.path.join(output_dir, f"{stem}_lick_traces.png"), dpi=300, bbox_inches="tight")
+        fig1.savefig(os.path.join(output_dir, f"{stem}_lick_occurrence.png"), dpi=plot_dpi, bbox_inches="tight")
+        fig2.savefig(os.path.join(output_dir, f"{stem}_lick_traces.png"), dpi=plot_dpi, bbox_inches="tight")
 
     if show_plots:
         plt.show(block=block_plots)
@@ -584,6 +407,7 @@ def extractLicking_lickTriggeredReward(
     smooth_window: int = 6500,
     block_plots: bool = True,
     start_trial: int = 1,
+    plot_style: Optional[Dict[str, Any]] = None,
 ) -> Optional[ExtractionResult]:
     """
     Extract, align, smooth, and analyze licking kinematics from a Bpod session file,
@@ -600,6 +424,7 @@ def extractLicking_lickTriggeredReward(
         smooth_window: Gaussian smoothing kernel size in time steps (default: 6500 = 0.65s).
         block_plots: Keep matplotlib windows open interactively.
         start_trial: Optional minimum trial index fallback (default: 1).
+        plot_style: Optional dictionary overriding default colors, DPI, or figure dimensions.
 
     Returns:
         ExtractionResult dictionary containing summary metrics, traces, and figures.
@@ -719,6 +544,7 @@ def extractLicking_lickTriggeredReward(
             show_plots=show_plots,
             block_plots=block_plots,
             unit_range_label=unit_range_label,
+            plot_style=plot_style,
         )
 
     if export_excel:

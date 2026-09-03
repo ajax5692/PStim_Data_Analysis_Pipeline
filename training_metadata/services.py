@@ -159,14 +159,35 @@ def execute_training_analysis(
         raise
 
 
-def claim_next_pending_training_session() -> Optional[TrainingSession]:
+def claim_next_pending_training_session(stale_threshold_hours: int = 2) -> Optional[TrainingSession]:
     """
     Atomically find and claim the oldest pending TrainingSession using row-level locking.
+    Automatically recovers any orphaned sessions stuck in RUNNING status past the stale threshold.
+
+    Args:
+        stale_threshold_hours: Maximum hours a session may remain RUNNING before being auto-failed.
 
     Returns:
         The claimed TrainingSession instance in RUNNING status, or None.
     """
     with transaction.atomic():
+        from datetime import timedelta
+        from django.utils import timezone
+
+        stale_cutoff = timezone.now() - timedelta(hours=stale_threshold_hours)
+        stale_sessions = (
+            TrainingSession.objects
+            .select_for_update(skip_locked=True)
+            .filter(
+                status=TrainingSession.StatusChoices.RUNNING,
+                started_at__lt=stale_cutoff,
+            )
+        )
+        for stale_s in stale_sessions:
+            stale_s.mark_failed(
+                f"Training analysis timed out or was interrupted (running longer than {stale_threshold_hours}h)."
+            )
+
         session = (
             TrainingSession.objects
             .select_for_update(skip_locked=True)
