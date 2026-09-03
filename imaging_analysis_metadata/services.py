@@ -1,8 +1,9 @@
 import json
+import os
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from django.conf import settings
 from django.db import transaction
@@ -73,6 +74,7 @@ def build_analysis_command(analysis_run: AnalysisRun, result_file: Path) -> List
 
     command = [
         str(suite2p_python),
+        "-u",
         str(analysis_runner),
         "--mesc-file",
         inputs["mesc_file_path"],
@@ -89,12 +91,17 @@ def build_analysis_command(analysis_run: AnalysisRun, result_file: Path) -> List
     return command
 
 
-def run_suite2p_analysis(analysis_run: AnalysisRun) -> Dict[str, Any]:
+def run_suite2p_analysis(
+    analysis_run: AnalysisRun,
+    logger_func: Optional[Callable[[str], None]] = None,
+) -> Dict[str, Any]:
     """
-    Execute Suite2P registration as an isolated subprocess and parse JSON output.
+    Execute Suite2P registration as an isolated subprocess, streaming logs live to the terminal
+    matching the exact texts written to the pipeline runlog .txt file.
 
     Args:
         analysis_run: The target AnalysisRun model instance.
+        logger_func: Optional callable to stream log messages to the console.
 
     Returns:
         Parsed JSON dictionary with output paths and calculated frame rate.
@@ -106,20 +113,51 @@ def run_suite2p_analysis(analysis_run: AnalysisRun) -> Dict[str, Any]:
         result_file = Path(temp_dir) / "imaging_analysis_result.json"
         command = build_analysis_command(analysis_run, result_file)
 
-        proc = subprocess.run(
+        # Enforce unbuffered UTF-8 environment variables so every line prints immediately
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+        env["PYTHONIOENCODING"] = "utf-8"
+        env["PYTHONUTF8"] = "1"
+
+        def emit(msg: str):
+            if logger_func:
+                logger_func(msg)
+            else:
+                print(msg, flush=True)
+
+        emit(f"\n[Run #{analysis_run.pk}] Starting Suite2P analysis...")
+        emit(f"[Run #{analysis_run.pk}] MESC File: {analysis_run.imaging_session.mesc_file_path}")
+        emit(f"[Run #{analysis_run.pk}] Unit Indices: {analysis_run.unit_indices}")
+        emit("-" * 60)
+
+        output_lines: List[str] = []
+
+        process = subprocess.Popen(
             command,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
-            check=False,
+            encoding="utf-8",
+            errors="replace",
+            env=env,
+            bufsize=1,
         )
 
-        if proc.returncode != 0:
-            error_details = proc.stderr.strip() or proc.stdout.strip() or f"Process exited with code {proc.returncode}"
-            raise RuntimeError(f"Suite2P analysis failed: {error_details}")
+        if process.stdout:
+            for line in iter(process.stdout.readline, ""):
+                output_lines.append(line)
+                emit(line.rstrip("\r\n"))
+
+        process.wait()
+        emit("-" * 60)
+
+        if process.returncode != 0:
+            error_details = "".join(output_lines).strip() or f"Process exited with code {process.returncode}"
+            raise RuntimeError(f"Suite2P analysis failed:\n{error_details}")
 
         if not result_file.exists():
             raise RuntimeError(
-                "Suite2P completed without producing an analysis result file."
+                f"Suite2P completed without producing an analysis result file.\nLog:\n{''.join(output_lines)}"
             )
 
         result: Dict[str, Any] = json.loads(
@@ -129,18 +167,22 @@ def run_suite2p_analysis(analysis_run: AnalysisRun) -> Dict[str, Any]:
         return result
 
 
-def execute_analysis(analysis_run: AnalysisRun) -> AnalysisRun:
+def execute_analysis(
+    analysis_run: AnalysisRun,
+    logger_func: Optional[Callable[[str], None]] = None,
+) -> AnalysisRun:
     """
     Execute analysis and update AnalysisRun instance fields and status.
 
     Args:
         analysis_run: The AnalysisRun database instance to process.
+        logger_func: Optional callback for streaming live log lines.
 
     Returns:
         The updated AnalysisRun instance.
     """
     try:
-        result = run_suite2p_analysis(analysis_run)
+        result = run_suite2p_analysis(analysis_run, logger_func=logger_func)
 
         analysis_run.frame_rate = round(float(result["frame_rate"]), 2)
         analysis_run.output_log_path = result.get("parameter_log_path", "")
@@ -155,6 +197,12 @@ def execute_analysis(analysis_run: AnalysisRun) -> AnalysisRun:
         )
 
         analysis_run.mark_completed()
+
+        if logger_func:
+            logger_func(f"[Run #{analysis_run.pk}] Detected Frame Rate: {analysis_run.frame_rate} Hz")
+            logger_func(f"[Run #{analysis_run.pk}] Output Folder: {analysis_run.output_path}")
+            logger_func(f"[Run #{analysis_run.pk}] Full Runlog File: {analysis_run.output_log_path}")
+
         return analysis_run
 
     except KeyboardInterrupt:
@@ -189,9 +237,14 @@ def claim_next_pending_analysis() -> Optional[AnalysisRun]:
         return analysis_run
 
 
-def process_next_analysis() -> Optional[AnalysisRun]:
+def process_next_analysis(
+    logger_func: Optional[Callable[[str], None]] = None,
+) -> Optional[AnalysisRun]:
     """
-    Claim and execute the next pending analysis job in the queue.
+    Claim and execute the next pending analysis job in the queue with live log output.
+
+    Args:
+        logger_func: Optional callback for streaming terminal messages.
 
     Returns:
         The processed AnalysisRun, or None if no pending jobs were found.
@@ -200,5 +253,5 @@ def process_next_analysis() -> Optional[AnalysisRun]:
     if analysis_run is None:
         return None
 
-    execute_analysis(analysis_run)
+    execute_analysis(analysis_run, logger_func=logger_func)
     return analysis_run

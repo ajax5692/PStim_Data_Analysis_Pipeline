@@ -1,20 +1,37 @@
 from pathlib import Path
 
+from django import forms
 from django.contrib import admin
 from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 
+from imaging_metadata.models import ImagingSession
+
 from .models import AnalysisRun, TrackChanges
 
 
+class ImagingSessionChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return f"{obj.animal.animal_id} - {obj.acquisition_date} (Units: {obj.measurement_unit_ranges})"
+    
+    
+class AnalysisRunAdminForm(forms.ModelForm):
+    imaging_session = ImagingSessionChoiceField(
+        queryset=ImagingSession.objects.select_related("animal").all()
+    )
+    class Meta:
+        model = AnalysisRun
+        fields = "__all__"
+
 @admin.register(AnalysisRun)
 class AnalysisRunAdmin(SimpleHistoryAdmin):
+    form = AnalysisRunAdminForm
     list_select_related = ("imaging_session__animal",)
 
     list_display = (
         "id",
         "animal_id",
-        "imaging_session",
+        "display_imaging_session",
         "display_status",
         "frame_rate",
         "created_at",
@@ -48,6 +65,22 @@ class AnalysisRunAdmin(SimpleHistoryAdmin):
     @admin.display(description="Animal ID")
     def animal_id(self, obj):
         return obj.animal_id
+
+    @admin.display(description="Imaging Session", ordering="imaging_session__acquisition_date")
+    def display_imaging_session(self, obj):
+        if not obj.imaging_session:
+            return "-"
+        session = obj.imaging_session
+        unit_str = f"({session.measurement_unit_ranges})" if session.measurement_unit_ranges else ""
+        return format_html(
+            '<div style="line-height: 1.25;">'
+            '<div>{} - {}</div>'
+            '<div style="font-size: 11px; color: #94a3b8; font-weight: 500;">{}</div>'
+            '</div>',
+            session.animal.animal_id,
+            session.acquisition_date,
+            unit_str,
+        )
 
     @admin.display(description="Status", ordering="status")
     def display_status(self, obj):
@@ -276,4 +309,4 @@ class TrackChangesAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
-        return False
+        return False

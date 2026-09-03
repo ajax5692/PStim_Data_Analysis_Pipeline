@@ -11,13 +11,15 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(
             self.style.SUCCESS(
-                "Imaging analysis worker started."
+                "=====================================================\n"
+                "  Imaging Analysis Worker Started (Polling for jobs)\n"
+                "====================================================="
             )
         )
 
         while True:
             try:
-                analysis_run = process_next_analysis()
+                analysis_run = process_next_analysis(logger_func=self.stdout.write)
 
                 if analysis_run is None:
                     time.sleep(5)
@@ -25,14 +27,14 @@ class Command(BaseCommand):
 
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f"Processed AnalysisRun #{analysis_run.pk}"
+                        f"\n✓ Successfully completed AnalysisRun #{analysis_run.pk}\n"
                     )
                 )
 
             except KeyboardInterrupt:
                 self.stdout.write(
                     self.style.WARNING(
-                        "Imaging analysis worker stopped."
+                        "\nImaging analysis worker stopped by user."
                     )
                 )
                 break
@@ -40,7 +42,6 @@ class Command(BaseCommand):
             except Exception as exc:
                 self.stderr.write(
                     self.style.ERROR(
-                        f"Analysis job failed: {exc}"
+                        f"\n✗ Analysis job failed: {exc}\n"
                     )
                 )
-

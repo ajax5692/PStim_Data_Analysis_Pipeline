@@ -43,6 +43,8 @@ class ImagingSession(models.Model):
         ordering = ["-acquisition_date"]
 
     def __str__(self):
+        if self.measurement_unit_ranges:
+            return f"{self.animal.animal_id} - {self.acquisition_date} ({self.measurement_unit_ranges})"
         return f"{self.animal.animal_id} - {self.acquisition_date}"
 
 
