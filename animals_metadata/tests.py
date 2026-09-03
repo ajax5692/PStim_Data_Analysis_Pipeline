@@ -59,3 +59,26 @@ class AnimalsMetadataTrackChangesTest(TestCase):
         inj.delete()
         self.assertEqual(TrackChanges.objects.filter(animal_id="ANM01", category=TrackChanges.CategoryChoices.VIRAL_INJECTION).count(), 3)
 
+    def test_dynamic_navigation_context(self):
+        from django.contrib.auth import get_user_model
+        from django.test import Client, RequestFactory
+        from Femto_DAP.context_processors import enabled_apps
+
+        factory = RequestFactory()
+        req = factory.get("/admin/")
+        context = enabled_apps(req)
+        self.assertIn("installed_apps", context)
+        self.assertTrue(context["installed_apps"].get("animals_metadata"))
+        self.assertTrue(context["installed_apps"].get("virus_metadata"))
+
+        User = get_user_model()
+        user = User.objects.create_superuser("adminuser", "admin@example.com", "password")
+        client = Client(SERVER_NAME="localhost")
+        client.force_login(user)
+
+        res = client.get("/admin/")
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "ANIMALS METADATA")
+        self.assertContains(res, "VIRUS METADATA")
+
+

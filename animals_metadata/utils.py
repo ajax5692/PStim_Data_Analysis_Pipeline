@@ -2,6 +2,7 @@ import re
 from typing import Any, List, Optional, Set, Tuple, Union
 
 from django.contrib import admin
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.http import HttpRequest
 from django.utils import timezone
@@ -413,5 +414,40 @@ def record_track_change(
         changed_by=user_initials,
         changes=changes_text,
     )
+
+
+def validate_measurement_unit_ranges(value: Any) -> None:
+    """
+    Validate measurement unit ranges string format, e.g.:
+        10:21,25:55
+        3,5:8,12
+    """
+    if not value or not str(value).strip():
+        raise ValidationError("Measurement unit ranges cannot be empty.")
+
+    for part in str(value).split(","):
+        part = part.strip()
+        if not part:
+            raise ValidationError("Invalid measurement unit range.")
+
+        if ":" in part:
+            values = part.split(":")
+            if len(values) != 2:
+                raise ValidationError(f"Invalid range '{part}'. Use the format start:end.")
+
+            try:
+                start = int(values[0])
+                end = int(values[1])
+            except ValueError:
+                raise ValidationError(f"Invalid range '{part}'. Unit numbers must be integers.")
+
+            if start > end:
+                raise ValidationError(f"Invalid range '{part}'. Start must not be greater than end.")
+        else:
+            try:
+                int(part)
+            except ValueError:
+                raise ValidationError(f"Invalid unit '{part}'. Unit numbers must be integers.")
+
 
 

@@ -3,8 +3,10 @@ from django.db import models
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
-from animals_metadata.utils import BaseAsyncJobModel
-from imaging_metadata.validators import validate_measurement_unit_ranges
+from animals_metadata.utils import (
+    BaseAsyncJobModel,
+    validate_measurement_unit_ranges,
+)
 
 
 class TrainingSession(BaseAsyncJobModel):
