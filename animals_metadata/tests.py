@@ -62,7 +62,7 @@ class AnimalsMetadataTrackChangesTest(TestCase):
     def test_dynamic_navigation_context(self):
         from django.contrib.auth import get_user_model
         from django.test import Client, RequestFactory
-        from Femto_DAP.context_processors import enabled_apps
+        from PStim_DAP.context_processors import enabled_apps
 
         factory = RequestFactory()
         req = factory.get("/admin/")
