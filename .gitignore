@@ -4,3 +4,5 @@ db.sqlite3
 .env
 # Media & generated lab data
 media/
+generate_system_architecture_pdf.py
+PhotoStim_Data_Analysis_Pipeline_Architecture_Guide.pdf
