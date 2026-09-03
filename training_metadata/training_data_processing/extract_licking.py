@@ -2,13 +2,13 @@
 Extracts, corrects, aligns, and analyzes lick port data from Bpod SessionData files
 for lick-triggered reward protocols (Visual Go / No-Go tasks).
 
-Modular Python implementation of extractLicking_lickTriggeredReward.
+Supports restricting analysis to user-specified training unit/trial ranges.
 """
 
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, TypedDict, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, TypedDict, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -34,6 +34,58 @@ class ExtractionResult(TypedDict):
     reward_onset: float
     punish_onset: float
     figures: List[plt.Figure]
+    unit_range: Optional[str]
+
+
+def parse_unit_ranges(unit_range_input: Optional[Union[str, List[int], range, Set[int]]]) -> Optional[List[int]]:
+    """
+    Convert a unit/trial range string (e.g. '10:21,25:55' or '3-174') into a sorted list of 1-based integers.
+
+    Args:
+        unit_range_input: String, list of integers, or range.
+
+    Returns:
+        Sorted list of integer trial numbers, or None if all trials should be analyzed.
+    """
+    if unit_range_input is None:
+        return None
+
+    if isinstance(unit_range_input, (list, tuple, range, set)):
+        return sorted(list(set(int(x) for x in unit_range_input)))
+
+    unit_range_str = str(unit_range_input).strip()
+    if not unit_range_str or unit_range_str.lower() in ("all", "none", "*", ""):
+        return None
+
+    units: Set[int] = set()
+    for part in unit_range_str.split(","):
+        part = part.strip()
+        if not part:
+            continue
+
+        if ":" in part:
+            pieces = part.split(":")
+            if len(pieces) == 2:
+                try:
+                    s, e = int(pieces[0]), int(pieces[1])
+                    units.update(range(min(s, e), max(s, e) + 1))
+                except ValueError:
+                    continue
+        elif "-" in part:
+            pieces = part.split("-")
+            if len(pieces) == 2:
+                try:
+                    s, e = int(pieces[0]), int(pieces[1])
+                    units.update(range(min(s, e), max(s, e) + 1))
+                except ValueError:
+                    continue
+        else:
+            try:
+                units.add(int(part))
+            except ValueError:
+                continue
+
+    return sorted(list(units)) if units else None
 
 
 def _get_field(obj: Any, field_name: str, default: Any = None) -> Any:
@@ -131,29 +183,27 @@ def load_bpod_session(sessionfilename: Union[str, Path]) -> Any:
 
 def determine_session_timing(
     session_data: Any,
-    start_trial: int = 21,
+    selected_trials: List[int],
 ) -> Tuple[float, float, float, float, float, float, float]:
     """
-    Determine trial length, event onsets, and stimulus boundaries.
+    Determine trial length, event onsets, and stimulus boundaries across selected trials.
 
     Args:
         session_data: The Bpod SessionData object.
-        start_trial: 1-indexed trial number to start parsing baseline timing.
+        selected_trials: List of 1-based trial numbers to evaluate.
 
     Returns:
         Tuple of (lengthOfTrial, so, so2, ro, po, visStimStart, visStimEnd).
     """
-    n_trials = int(session_data.nTrials)
     length_of_trial = 0.0
     ro = 0.0
     po = 0.0
     so = 0.0
     so2 = 0.0
 
-    start_idx = max(0, min(start_trial - 1, n_trials - 1))
-
-    for i in range(start_idx, n_trials):
-        trial = session_data.RawEvents.Trial[i]
+    for trial_num in selected_trials:
+        idx = trial_num - 1
+        trial = session_data.RawEvents.Trial[idx]
         states = trial.States
         events = trial.Events
 
@@ -207,13 +257,16 @@ def determine_session_timing(
 def extract_trial_lick_matrix(
     session_data: Any,
     time_axis: npt.NDArray[np.float64],
+    selected_trials: Set[int],
 ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.bool_], int, Dict[int, npt.NDArray[np.float64]]]:
     """
-    Extract individual lick event timestamps and populate the high-resolution binary matrix.
+    Extract individual lick event timestamps and populate the high-resolution binary matrix
+    strictly for the specified unit/trial range.
 
     Args:
         session_data: Bpod SessionData object.
         time_axis: 1D array of 0.1ms time increments.
+        selected_trials: Set of 1-based trial indices to process.
 
     Returns:
         Tuple of (Ylicktr, Excluded, trialsWithLick, trial_lick_events).
@@ -225,6 +278,13 @@ def extract_trial_lick_matrix(
     trial_lick_events: Dict[int, npt.NDArray[np.float64]] = {}
 
     for i in range(n_trials):
+        trial_num = i + 1
+
+        # If trial is outside the user-specified unit range, exclude it from analysis
+        if trial_num not in selected_trials:
+            excluded[i] = True
+            continue
+
         trial = session_data.RawEvents.Trial[i]
         states = trial.States
         events = trial.Events
@@ -330,10 +390,8 @@ def compute_smoothed_averages_and_integrals(
     ro: float,
 ) -> Tuple[Dict[int, npt.NDArray[np.float64]], Dict[int, float], float]:
     """
-    Compute trial-averaged lick envelopes, apply Gaussian convolution, and calculate stimulus integrals.
-
-    Returns:
-        Tuple of (Ylicktr_avg, intgrStimulus, maxAmpl).
+    Compute trial-averaged lick envelopes, apply Gaussian convolution, and calculate stimulus integrals
+    strictly over the included (non-excluded) trials within the unit range.
     """
     gw = windows.gaussian(smooth_window, std=(smooth_window - 1) / 5.0)
     gw = gw / np.sum(gw)
@@ -381,6 +439,7 @@ def generate_lick_figures(
     output_dir: Optional[Union[str, Path]],
     show_plots: bool,
     block_plots: bool,
+    unit_range_label: Optional[str] = None,
 ) -> List[plt.Figure]:
     """
     Render and optionally save raster plot and average licking trace figures.
@@ -396,6 +455,8 @@ def generate_lick_figures(
     if max_trial_type > 2:
         extra_colors = plt.cm.tab10(np.linspace(0, 1, max_trial_type))[:, :3]
         tp = np.vstack([tp, extra_colors[2:]])
+
+    range_suffix = f" (Units {unit_range_label})" if unit_range_label else ""
 
     # FIGURE 1: Raster Plot
     fig1, ax1 = plt.subplots(figsize=(10, 6))
@@ -423,7 +484,7 @@ def generate_lick_figures(
     ax1.set_ylabel("Licking", fontsize=11)
     ax1.set_xlabel("Time (s)", fontsize=11)
     clean_stem = Path(sessionfilename).stem.replace("_", " ")
-    ax1.set_title(f"Lick Occurrences - {clean_stem}", fontsize=12, fontweight="bold")
+    ax1.set_title(f"Lick Occurrences - {clean_stem}{range_suffix}", fontsize=12, fontweight="bold")
     ax1.legend(loc="upper right", frameon=False, fontsize=10)
     ax1.spines["top"].set_visible(False)
     ax1.spines["right"].set_visible(False)
@@ -465,7 +526,7 @@ def generate_lick_figures(
 
     ax2.set_ylabel("Licking", fontsize=11)
     ax2.set_xlabel("Time (s)", fontsize=11)
-    ax2.set_title(f"Average licking trace - {clean_stem}", fontsize=12, fontweight="bold")
+    ax2.set_title(f"Average licking trace - {clean_stem}{range_suffix}", fontsize=12, fontweight="bold")
     ax2.legend(loc="upper right", frameon=False, fontsize=10)
     ax2.spines["top"].set_visible(False)
     ax2.spines["right"].set_visible(False)
@@ -488,23 +549,23 @@ def export_licking_traces_excel(
     sessionfilename: str,
     time_axis: npt.NDArray[np.float64],
     y_lick_matrix: npt.NDArray[np.float64],
-    n_trials: int,
+    selected_trials: List[int],
     output_dir: Optional[Union[str, Path]] = None,
     step: int = 500,
 ) -> Path:
     """
-    Export downsampled trial-by-trial licking arrays to Excel (.xlsx).
+    Export downsampled trial-by-trial licking arrays for the selected units to Excel (.xlsx).
     """
     target_dir = Path(output_dir) if output_dir else Path(sessionfilename).parent
     target_dir.mkdir(parents=True, exist_ok=True)
     xls_path = target_dir / f"Individual_licking_traces_{Path(sessionfilename).stem}.xlsx"
 
     x_down = time_axis[::step]
-    y_down = y_lick_matrix[:, ::step]
-
     data_dict: Dict[str, Any] = {"t": x_down}
-    for i in range(n_trials):
-        data_dict[f"Trial_{i+1}"] = y_down[i, :]
+
+    for trial_num in selected_trials:
+        idx = trial_num - 1
+        data_dict[f"Trial_{trial_num}"] = y_lick_matrix[idx, ::step]
 
     df_export = pd.DataFrame(data_dict)
     df_export.to_excel(xls_path, index=False)
@@ -514,7 +575,7 @@ def export_licking_traces_excel(
 
 def extractLicking_lickTriggeredReward(
     sessionfilename: Optional[Union[str, Path]] = None,
-    start_trial: int = 21,
+    unit_range: Optional[Union[str, List[int], range, Set[int]]] = None,
     show_plots: bool = True,
     save_plots: bool = False,
     output_dir: Optional[Union[str, Path]] = None,
@@ -522,13 +583,15 @@ def extractLicking_lickTriggeredReward(
     smooth_traces: bool = True,
     smooth_window: int = 6500,
     block_plots: bool = True,
+    start_trial: int = 1,
 ) -> Optional[ExtractionResult]:
     """
-    Extract, align, smooth, and analyze licking kinematics from a Bpod session file.
+    Extract, align, smooth, and analyze licking kinematics from a Bpod session file,
+    restricted strictly to the specified training unit/trial range.
 
     Args:
         sessionfilename: Path to the .mat Bpod session file.
-        start_trial: Trial index from which to evaluate length and onsets (default: 21).
+        unit_range: Specified unit range (e.g. '10:21,25:55' or '3:174'). If None, all trials are analyzed.
         show_plots: Display interactive matplotlib plot windows.
         save_plots: Save high-resolution PNG plots to output_dir.
         output_dir: Destination folder for plots and Excel exports.
@@ -536,6 +599,7 @@ def extractLicking_lickTriggeredReward(
         smooth_traces: Apply Gaussian convolution to averaged licking traces.
         smooth_window: Gaussian smoothing kernel size in time steps (default: 6500 = 0.65s).
         block_plots: Keep matplotlib windows open interactively.
+        start_trial: Optional minimum trial index fallback (default: 1).
 
     Returns:
         ExtractionResult dictionary containing summary metrics, traces, and figures.
@@ -562,9 +626,25 @@ def extractLicking_lickTriggeredReward(
     sessionfilename_str = str(sessionfilename)
     session_data = load_bpod_session(sessionfilename_str)
 
-    n_trials = int(session_data.nTrials)
+    total_session_trials = int(session_data.nTrials)
     trial_types_raw = _to_1d_array(session_data.TrialTypes).astype(int)
     max_trial_type = int(np.max(trial_types_raw)) if len(trial_types_raw) > 0 else 1
+
+    # Parse and validate selected unit range
+    parsed_units = parse_unit_ranges(unit_range)
+    if parsed_units:
+        valid_selected_trials = [t for t in parsed_units if 1 <= t <= total_session_trials]
+        unit_range_label = str(unit_range).strip()
+    else:
+        valid_selected_trials = list(range(1, total_session_trials + 1))
+        unit_range_label = None
+
+    if not valid_selected_trials:
+        valid_selected_trials = list(range(1, total_session_trials + 1))
+        unit_range_label = None
+
+    selected_trials_set = set(valid_selected_trials)
+    n_selected_trials = len(valid_selected_trials)
 
     (
         length_of_trial,
@@ -574,13 +654,15 @@ def extractLicking_lickTriggeredReward(
         po,
         vis_stim_start,
         vis_stim_end,
-    ) = determine_session_timing(session_data, start_trial=start_trial)
+    ) = determine_session_timing(session_data, selected_trials=valid_selected_trials)
 
     dt = 0.0001
     x = np.arange(0, length_of_trial + dt, dt, dtype=np.float64)
 
     y_lick_matrix, excluded, trials_with_lick, trial_lick_events = extract_trial_lick_matrix(
-        session_data, x
+        session_data=session_data,
+        time_axis=x,
+        selected_trials=selected_trials_set,
     )
 
     y_lick_avg, intgr_stimulus, max_ampl = compute_smoothed_averages_and_integrals(
@@ -595,13 +677,19 @@ def extractLicking_lickTriggeredReward(
         ro=ro,
     )
 
+    # Calculate excluded count within the selected unit range
+    selected_indices = [t - 1 for t in valid_selected_trials]
+    excluded_in_selection = int(np.sum(excluded[selected_indices]))
+
     filename_base = os.path.basename(sessionfilename_str)
     print("\n" + "=" * 60)
     print(f"File: {filename_base}")
-    print(f"Number of trials: {n_trials} trials")
-    print(f"Licked in: {trials_with_lick - int(np.sum(excluded))} trials")
-    print(f"No lick in: {n_trials - trials_with_lick} trials")
-    print(f"Excluded trials: {int(np.sum(excluded))}")
+    if unit_range_label:
+        print(f"Selected Unit Range: {unit_range_label} ({n_selected_trials} trials)")
+    print(f"Number of analyzed trials: {n_selected_trials} trials")
+    print(f"Licked in: {trials_with_lick - excluded_in_selection} trials")
+    print(f"No lick in: {n_selected_trials - trials_with_lick} trials")
+    print(f"Excluded trials: {excluded_in_selection}")
     print("-" * 60)
     for tt in intgr_stimulus:
         label = "go trial" if tt == 1 else "no-go trial"
@@ -614,7 +702,7 @@ def extractLicking_lickTriggeredReward(
             sessionfilename=sessionfilename_str,
             time_axis=x,
             length_of_trial=length_of_trial,
-            n_trials=n_trials,
+            n_trials=total_session_trials,
             trial_types_raw=trial_types_raw,
             excluded=excluded,
             trial_lick_events=trial_lick_events,
@@ -630,6 +718,7 @@ def extractLicking_lickTriggeredReward(
             output_dir=output_dir,
             show_plots=show_plots,
             block_plots=block_plots,
+            unit_range_label=unit_range_label,
         )
 
     if export_excel:
@@ -637,15 +726,15 @@ def extractLicking_lickTriggeredReward(
             sessionfilename=sessionfilename_str,
             time_axis=x,
             y_lick_matrix=y_lick_matrix,
-            n_trials=n_trials,
+            selected_trials=valid_selected_trials,
             output_dir=output_dir,
         )
 
     return {
         "sessionfilename": sessionfilename_str,
-        "nTrials": n_trials,
+        "nTrials": n_selected_trials,
         "trialsWithLick": trials_with_lick,
-        "excludedTrials": int(np.sum(excluded)),
+        "excludedTrials": excluded_in_selection,
         "lengthOfTrial": length_of_trial,
         "time_axis": x,
         "Ylicktr": y_lick_matrix,
@@ -657,11 +746,14 @@ def extractLicking_lickTriggeredReward(
         "reward_onset": ro,
         "punish_onset": po,
         "figures": figs,
+        "unit_range": unit_range_label,
     }
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 2:
+        extractLicking_lickTriggeredReward(sys.argv[1], unit_range=sys.argv[2], show_plots=True)
+    elif len(sys.argv) > 1:
         extractLicking_lickTriggeredReward(sys.argv[1], show_plots=True)
     else:
         extractLicking_lickTriggeredReward()

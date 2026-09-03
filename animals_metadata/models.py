@@ -22,13 +22,13 @@ class Animal(models.Model):
         ALIVE = 'Alive', 'Alive'
         DEAD  = 'Dead', 'Dead'
         
-    animal_id = models.CharField(max_length=10,unique=True)
+    animal_id = models.CharField(max_length=10,unique=True,verbose_name="Animal ID")
     owner = models.CharField(max_length=100,choices=OwnerChoices.choices, null=True, blank=True)
     sex = models.CharField(max_length=100,choices=SexChoices.choices)
     genotype = models.CharField(max_length=100,choices=GenotypeChoices.choices)
-    cage_id = models.CharField(max_length=100, null=True, blank=True)
-    ogr_id = models.CharField(max_length=100, null=True, blank=True)
-    project_id = models.CharField(max_length=100, null=True, blank=True)
+    cage_id = models.CharField(max_length=100, null=True, blank=True,verbose_name="Cage ID")
+    ogr_id = models.CharField(max_length=100, null=True, blank=True,verbose_name="OGR ID")
+    project_id = models.CharField(max_length=100, null=True, blank=True,verbose_name="Project ID")
     
     dob = models.DateField(verbose_name="Date of Birth")
     @property
@@ -60,7 +60,8 @@ class VisionCheck(models.Model):
         
     animal_id = models.ForeignKey(
         Animal,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        verbose_name="Animal ID"
     )
     
     vision_test_type = models.CharField(max_length=10,choices=TestChoices.choices)
@@ -71,6 +72,9 @@ class VisionCheck(models.Model):
     class Meta:
         verbose_name = "Vision Check"
         verbose_name_plural = "Vision Check"
+
+    def __str__(self):
+        return f"{self.animal_id}"
     
 class ViralInjection(models.Model):
 
@@ -224,6 +228,9 @@ class ViralInjection(models.Model):
     class Meta:
         verbose_name = "Viral Injections"
         verbose_name_plural = "Viral Injections"
+
+    def __str__(self):
+        return f"{self.animal_id}"
 
 class TrackChanges(models.Model):
 

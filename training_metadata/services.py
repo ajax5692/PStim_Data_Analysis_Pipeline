@@ -87,6 +87,7 @@ def execute_training_analysis(
 
         result = extractLicking_lickTriggeredReward(
             sessionfilename=bpod_file,
+            unit_range=inputs.get("training_unit_range"),
             show_plots=False,
             save_plots=True,
             output_dir=str(target_dir),

@@ -1,8 +1,11 @@
-{% extends "admin/base.html" %} {% block branding %}
+{% extends "admin/base.html" %}
+
+{% block branding %}
 <div id="site-name">
   <a href="{% url 'admin:index' %}"> PhotoStim Data Administration </a>
 </div>
-{% endblock %} {% block extrastyle %} {{ block.super }}
+{% endblock %}
+
 {% block extrahead %}
 {{ block.super }}
 <script>
@@ -12,6 +15,8 @@
 </script>
 {% endblock %}
 
+{% block extrastyle %}
+{{ block.super }}
 <style>
   /* =========================================================
      GLOBAL SETTINGS
@@ -426,7 +431,14 @@
   body.app-imaging_analysis_metadata.model-analysisrun.change-list
     #result_list
     td:nth-child(4) {
-    width: 8% !important;
+    width: 8.5% !important;
+  }
+
+  body.app-imaging_analysis_metadata.model-analysisrun.change-list
+    #result_list
+    td.field-display_imaging_session {
+    white-space: normal !important;
+    line-height: 1.25 !important;
   }
 
   body.app-imaging_analysis_metadata.model-analysisrun.change-list
@@ -435,7 +447,7 @@
   body.app-imaging_analysis_metadata.model-analysisrun.change-list
     #result_list
     td:nth-child(5) {
-    width: 6% !important;
+    width: 7% !important;
   }
 
   body.app-imaging_analysis_metadata.model-analysisrun.change-list
@@ -444,7 +456,7 @@
   body.app-imaging_analysis_metadata.model-analysisrun.change-list
     #result_list
     td:nth-child(6) {
-    width: 6.5% !important;
+    width: 6% !important;
   }
 
   body.app-imaging_analysis_metadata.model-analysisrun.change-list
@@ -462,7 +474,7 @@
   body.app-imaging_analysis_metadata.model-analysisrun.change-list
     #result_list
     td:nth-child(8) {
-    width: 11% !important;
+    width: 9% !important;
   }
 
   body.app-imaging_analysis_metadata.model-analysisrun.change-list
@@ -480,7 +492,7 @@
   body.app-imaging_analysis_metadata.model-analysisrun.change-list
     #result_list
     td:last-child {
-    width: 36% !important;
+    width: 45% !important;
 
     white-space: normal !important;
 

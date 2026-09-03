@@ -159,7 +159,7 @@ class TrainingAnalysisServiceAndAdminTest(TestCase):
                 self.assertTrue(bool(claimed.output_raster_path))
                 self.assertTrue(bool(claimed.output_excel_path))
                 self.assertIn("n_trials", claimed.metrics_json)
-                self.assertEqual(claimed.metrics_json["n_trials"], 167)
+                self.assertEqual(claimed.metrics_json["n_trials"], 12)
 
     def test_admin_lick_traces_view(self):
         session = TrainingSession.objects.create(

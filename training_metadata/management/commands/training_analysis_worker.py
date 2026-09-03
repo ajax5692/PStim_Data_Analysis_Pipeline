@@ -11,7 +11,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(
             self.style.SUCCESS(
-                "Training analysis worker started. Listening for pending training sessions..."
+                "=====================================================\n"
+                "  Training Analysis Worker Started (Polling for jobs)\n"
+                "====================================================="
             )
         )
 
