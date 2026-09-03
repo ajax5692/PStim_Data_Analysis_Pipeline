@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -33,9 +34,11 @@ _allowed_hosts_raw = os.getenv("DJANGO_ALLOWED_HOSTS", "*")
 ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_raw.split(",") if h.strip()] if _allowed_hosts_raw else []
 
 
-# Application definition
+# =============================================================================
+# Deployment Profile & Application Definition
+# =============================================================================
 
-INSTALLED_APPS = [
+DJANGO_BASE_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -43,12 +46,42 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'simple_history',
-    'animals_metadata',
-    'imaging_metadata',
-    'imaging_analysis_metadata',
-    'training_metadata',
-    'virus_metadata',
 ]
+
+DEPLOYMENT_PROFILES = {
+    'CORE': [
+        'animals_metadata',
+        'virus_metadata',
+    ],
+    'IMAGING': [
+        'animals_metadata',
+        'virus_metadata',
+        'imaging_metadata',
+    ],
+    'TRAINING': [
+        'animals_metadata',
+        'virus_metadata',
+        'training_metadata',
+    ],
+    'FULL': [
+        'animals_metadata',
+        'virus_metadata',
+        'imaging_metadata',
+        'imaging_analysis_metadata',
+        'training_metadata',
+    ],
+}
+
+PSTIM_PROFILE = os.getenv("PSTIM_PROFILE", "FULL").strip().upper()
+
+if PSTIM_PROFILE not in DEPLOYMENT_PROFILES:
+    valid_profiles = ", ".join(DEPLOYMENT_PROFILES.keys())
+    raise ImproperlyConfigured(
+        f"Invalid PSTIM_PROFILE '{PSTIM_PROFILE}'. "
+        f"Supported deployment profiles are: {valid_profiles}."
+    )
+
+INSTALLED_APPS = DJANGO_BASE_APPS + DEPLOYMENT_PROFILES[PSTIM_PROFILE]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
