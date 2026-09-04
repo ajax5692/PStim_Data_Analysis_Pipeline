@@ -3,38 +3,17 @@ from django.db import models
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
+from animals_metadata.utils import (
+    BaseAsyncJobModel,
+    validate_measurement_unit_ranges,
+)
 
-class TrainingSession(models.Model):
-    class StatusChoices(models.TextChoices):
-        PENDING = "pending", "Pending"
-        RUNNING = "running", "Running"
-        COMPLETED = "completed", "Completed"
-        FAILED = "failed", "Failed"
 
+class TrainingSession(BaseAsyncJobModel):
     animal = models.ForeignKey(
         "animals_metadata.Animal",
         on_delete=models.PROTECT,
         related_name="training_sessions",
-    )
-
-    status = models.CharField(
-        max_length=20,
-        choices=StatusChoices.choices,
-        default=StatusChoices.PENDING,
-    )
-
-    created_at = models.DateTimeField(
-        default=timezone.now,
-    )
-
-    started_at = models.DateTimeField(
-        blank=True,
-        null=True,
-    )
-
-    completed_at = models.DateTimeField(
-        blank=True,
-        null=True,
     )
 
     training_date = models.DateField()
@@ -46,6 +25,7 @@ class TrainingSession(models.Model):
 
     training_unit_range = models.CharField(
         max_length=200,
+        validators=[validate_measurement_unit_ranges],
         help_text="Example: 10:21,25:55",
     )
 
@@ -84,27 +64,7 @@ class TrainingSession(models.Model):
         null=True,
     )
 
-    error_message = models.TextField(
-        blank=True,
-        help_text="Error message recorded if training analysis fails.",
-    )
-
-    def mark_running(self):
-        self.status = self.StatusChoices.RUNNING
-        self.started_at = timezone.now()
-        self.completed_at = None
-        self.error_message = ""
-
-        self.save(
-            update_fields=[
-                "status",
-                "started_at",
-                "completed_at",
-                "error_message",
-            ]
-        )
-
-    def mark_completed(self):
+    def mark_completed(self) -> None:
         self.status = self.StatusChoices.COMPLETED
         self.completed_at = timezone.now()
         self.error_message = ""
@@ -117,19 +77,6 @@ class TrainingSession(models.Model):
                 "output_excel_path",
                 "output_log_path",
                 "metrics_json",
-                "error_message",
-            ]
-        )
-
-    def mark_failed(self, error_message=""):
-        self.status = self.StatusChoices.FAILED
-        self.completed_at = timezone.now()
-        self.error_message = str(error_message)
-
-        self.save(
-            update_fields=[
-                "status",
-                "completed_at",
                 "error_message",
             ]
         )

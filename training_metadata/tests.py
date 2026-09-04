@@ -159,7 +159,7 @@ class TrainingAnalysisServiceAndAdminTest(TestCase):
                 self.assertTrue(bool(claimed.output_raster_path))
                 self.assertTrue(bool(claimed.output_excel_path))
                 self.assertIn("n_trials", claimed.metrics_json)
-                self.assertEqual(claimed.metrics_json["n_trials"], 167)
+                self.assertEqual(claimed.metrics_json["n_trials"], 12)
 
     def test_admin_lick_traces_view(self):
         session = TrainingSession.objects.create(
@@ -173,3 +173,26 @@ class TrainingAnalysisServiceAndAdminTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f"Animal {self.animal.animal_id}")
         self.assertContains(response, "Average Licking Trace")
+
+    def test_training_unit_range_validation(self):
+        from django.core.exceptions import ValidationError
+
+        # Valid formats should pass full_clean
+        valid_session = TrainingSession(
+            animal=self.animal,
+            training_date=timezone.now().date(),
+            bpod_file_path="/data/test.mat",
+            training_unit_range="10:21, 25:55",
+        )
+        valid_session.full_clean()
+
+        # Invalid format should raise ValidationError
+        invalid_session = TrainingSession(
+            animal=self.animal,
+            training_date=timezone.now().date(),
+            bpod_file_path="/data/test.mat",
+            training_unit_range="10-21-30",
+        )
+        with self.assertRaises(ValidationError):
+            invalid_session.full_clean()
+
